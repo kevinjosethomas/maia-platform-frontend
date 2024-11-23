@@ -309,6 +309,16 @@ export const getAnalyzedUserGame = async (
   const blackPlayer = data['black_player']
   const whitePlayer = data['white_player']
 
+  const maiaPattern = /maia_kdd_1\d00/
+
+  if (maiaPattern.test(blackPlayer.name)) {
+    blackPlayer.name = blackPlayer.name.replace('maia_kdd_', 'Maia ')
+  }
+
+  if (maiaPattern.test(whitePlayer.name)) {
+    whitePlayer.name = whitePlayer.name.replace('maia_kdd_', 'Maia ')
+  }
+
   const maiaEvaluations: { [model: string]: MoveMap[] } = {}
   const positionEvaluations: { [model: string]: PositionEvaluation[] } = {}
   const availableMoves: AvailableMoves[] = []

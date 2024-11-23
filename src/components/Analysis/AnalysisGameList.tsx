@@ -101,25 +101,43 @@ const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
       <div className="flex min-h-12 w-full items-center justify-center overflow-hidden bg-background-2">
         <button
           onClick={() => setSelected('pgn')}
-          className={`relative z-10 flex h-full w-full items-center justify-center py-2 pb-3 transition duration-300 hover:bg-background-3 ${['pgn', 'hand', 'brain', 'play'].includes(selected) && 'bg-background-5'}`}
+          className={`relative z-10 flex h-full w-full items-center justify-center gap-1 py-2 pb-3 transition duration-300 ${selected !== 'tournament' ? 'bg-human-4/40' : 'hover:bg-background-3'}`}
         >
-          <p className="z-10 font-medium text-primary">Your Games</p>
-          {['pgn', 'hand', 'brain', 'play'].includes(selected) && (
+          <p
+            className={`z-10 font-medium transition duration-200 ${selected !== 'tournament' ? 'text-human-1' : 'text-primary'}`}
+          >
+            Your Games
+          </p>
+          <i
+            className={`material-symbols-outlined text-lg transition duration-200 ${selected !== 'tournament' ? 'text-human-1' : 'text-primary/80'}`}
+          >
+            keyboard_arrow_down
+          </i>
+          {selected !== 'tournament' && (
             <motion.div
               layoutId="selected-highlight"
-              className="absolute bottom-0 left-0 h-1 w-full rounded bg-primary"
+              className="absolute bottom-0 left-0 h-1 w-full rounded bg-human-2/80"
             />
           )}
         </button>
         <button
           onClick={() => setSelected('tournament')}
-          className={`relative z-10 flex h-full w-full items-center justify-center py-2 pb-3 transition duration-300 hover:bg-background-3 ${selected === 'tournament' && 'bg-background-5'}`}
+          className={`relative z-10 flex h-full w-full items-center justify-center gap-1 py-2 pb-3 transition duration-300 ${selected === 'tournament' ? 'bg-human-4/40' : 'hover:bg-background-3'}`}
         >
-          <p className="z-10 font-medium text-primary">WC Matches</p>
+          <p
+            className={`z-10 font-medium transition duration-200 ${selected === 'tournament' ? 'text-human-1' : 'text-primary'}`}
+          >
+            WC Matches
+          </p>
+          <i
+            className={`material-symbols-outlined text-lg transition duration-200 ${selected === 'tournament' ? 'text-human-1' : 'text-primary/80'}`}
+          >
+            keyboard_arrow_down
+          </i>
           {selected === 'tournament' && (
             <motion.div
               layoutId="selected-highlight"
-              className="absolute bottom-0 left-0 h-1 w-full rounded bg-primary"
+              className="absolute bottom-0 left-0 h-1 w-full rounded bg-human-2/80"
             />
           )}
         </button>
