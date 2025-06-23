@@ -11,6 +11,7 @@ import { motion } from 'framer-motion'
 import { Tournament } from 'src/components'
 import { AnalysisListContext } from 'src/contexts'
 import { getAnalysisGameList } from 'src/api'
+import { getCustomAnalysesAsWebGames } from 'src/utils/customAnalysis'
 
 interface GameData {
   game_id: string
@@ -35,6 +36,12 @@ interface AnalysisGameListProps {
     type: 'play' | 'hand' | 'brain',
     setCurrentMove?: Dispatch<SetStateAction<number>>,
   ) => Promise<void>
+  loadNewCustomGame: (
+    id: string,
+    setCurrentMove?: Dispatch<SetStateAction<number>>,
+  ) => Promise<void>
+  onCustomAnalysis?: () => void
+  refreshTrigger?: number // Used to trigger refresh when custom analysis is added
 }
 
 export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
@@ -42,6 +49,9 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
   loadNewTournamentGame,
   loadNewLichessGames,
   loadNewUserGames,
+  loadNewCustomGame,
+  onCustomAnalysis,
+  refreshTrigger,
 }) => {
   const {
     analysisPlayList,
@@ -57,6 +67,22 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
   const [localPlayGames, setLocalPlayGames] = useState(analysisPlayList)
   const [localHandGames, setLocalHandGames] = useState(analysisHandList)
   const [localBrainGames, setLocalBrainGames] = useState(analysisBrainList)
+  const [customAnalyses, setCustomAnalyses] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return getCustomAnalysesAsWebGames()
+    }
+    return []
+  })
+
+  useEffect(() => {
+    setCustomAnalyses(getCustomAnalysesAsWebGames())
+  }, [refreshTrigger])
+
+  useEffect(() => {
+    if (currentId?.[0]?.startsWith('custom-')) {
+      setSelected('pgn')
+    }
+  }, [currentId])
 
   const [fetchedCache, setFetchedCache] = useState<{
     [key: string]: { [page: number]: boolean }
@@ -102,11 +128,18 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
 
   const [selected, setSelected] = useState<
     'tournament' | 'pgn' | 'play' | 'hand' | 'brain'
-  >(
-    ['pgn', 'play', 'hand', 'brain'].includes(currentId?.[1] ?? '')
-      ? (currentId?.[1] as 'pgn' | 'play' | 'hand' | 'brain')
-      : 'tournament',
-  )
+  >(() => {
+    // Check if currentId is a custom game (starts with 'custom-')
+    if (currentId?.[0]?.startsWith('custom-')) {
+      return 'pgn' // Custom games are in the pgn/Custom tab
+    }
+    // Check if it's one of the other specific types
+    if (['pgn', 'play', 'hand', 'brain'].includes(currentId?.[1] ?? '')) {
+      return currentId?.[1] as 'pgn' | 'play' | 'hand' | 'brain'
+    }
+
+    return 'tournament'
+  })
   const [loadingIndex, setLoadingIndex] = useState<number | null>(null)
   const [openIndex, setOpenIndex] = useState<number | null>(initialOpenIndex)
 
@@ -240,7 +273,7 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
             setSelected={handleTabChange}
           />
           <Header
-            label="Lichess"
+            label="Custom"
             name="pgn"
             selected={selected}
             setSelected={handleTabChange}
@@ -290,7 +323,7 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
                       ? localHandGames
                       : selected === 'brain'
                         ? localBrainGames
-                        : analysisLichessList
+                        : [...customAnalyses, ...analysisLichessList]
                   ).map((game, index) => {
                     const selectedGame = currentId && currentId[0] === game.id
                     return (
@@ -303,6 +336,11 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
                               game.id,
                               game.pgn as string,
                             )
+                          } else if (
+                            game.type === 'custom-pgn' ||
+                            game.type === 'custom-fen'
+                          ) {
+                            await loadNewCustomGame(game.id)
                           } else {
                             await loadNewUserGames(
                               game.id,
@@ -384,6 +422,19 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
             <p className="ml-2 text-xs text-secondary">₍^. .^₎⟆</p>
           </div>
         </div>
+        {onCustomAnalysis && (
+          <button
+            onClick={onCustomAnalysis}
+            className="flex w-full items-center gap-2 bg-background-4/40 px-3 py-1.5 transition duration-200 hover:bg-background-4/80"
+          >
+            <span className="material-symbols-outlined text-xs text-secondary">
+              add
+            </span>
+            <span className="text-xs text-secondary">
+              Analyze Custom PGN/FEN
+            </span>
+          </button>
+        )}
       </div>
     </div>
   ) : null

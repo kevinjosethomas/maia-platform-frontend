@@ -387,6 +387,160 @@ export const getAnalyzedLichessGame = async (id: string, pgn: string) => {
   } as AnalyzedGame
 }
 
+const createAnalyzedGameFromPGN = async (
+  pgn: string,
+  id?: string,
+): Promise<AnalyzedGame> => {
+  const { Chess } = await import('chess.ts')
+  const chess = new Chess()
+
+  try {
+    chess.loadPgn(pgn)
+  } catch (error) {
+    throw new Error('Invalid PGN format')
+  }
+
+  const history = chess.history({ verbose: true })
+  const headers = chess.header()
+
+  const moves = []
+  const tempChess = new Chess()
+
+  const startingFen =
+    headers.FEN || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+  if (headers.FEN) {
+    tempChess.load(headers.FEN)
+  }
+
+  moves.push({
+    board: tempChess.fen(),
+    lastMove: undefined,
+    san: undefined,
+    check: tempChess.inCheck(),
+    maia_values: {},
+  })
+
+  for (const move of history) {
+    tempChess.move(move)
+    moves.push({
+      board: tempChess.fen(),
+      lastMove: [move.from, move.to] as [string, string],
+      san: move.san,
+      check: tempChess.inCheck(),
+      maia_values: {},
+    })
+  }
+
+  const tree = buildGameTree(moves, startingFen)
+
+  return {
+    id: id || `custom-pgn-${Date.now()}`,
+    blackPlayer: { name: headers.Black || 'Black', rating: undefined },
+    whitePlayer: { name: headers.White || 'White', rating: undefined },
+    moves,
+    availableMoves: new Array(moves.length).fill({}),
+    gameType: 'custom',
+    termination: {
+      result: headers.Result || '*',
+      winner:
+        headers.Result === '1-0'
+          ? 'white'
+          : headers.Result === '0-1'
+            ? 'black'
+            : 'none',
+      condition: 'Normal',
+    },
+    maiaEvaluations: new Array(moves.length).fill({}),
+    stockfishEvaluations: new Array(moves.length).fill(undefined),
+    tree,
+    type: 'custom-pgn' as const,
+    pgn,
+  } as AnalyzedGame
+}
+
+export const getAnalyzedCustomPGN = async (
+  pgn: string,
+  name?: string,
+): Promise<AnalyzedGame> => {
+  const { saveCustomAnalysis } = await import('src/utils/customAnalysis')
+
+  const stored = saveCustomAnalysis('pgn', pgn, name)
+
+  return createAnalyzedGameFromPGN(pgn, stored.id)
+}
+
+const createAnalyzedGameFromFEN = async (
+  fen: string,
+  id?: string,
+): Promise<AnalyzedGame> => {
+  const { Chess } = await import('chess.ts')
+  const chess = new Chess()
+
+  try {
+    chess.load(fen)
+  } catch (error) {
+    throw new Error('Invalid FEN format')
+  }
+
+  const moves = [
+    {
+      board: fen,
+      lastMove: undefined,
+      san: undefined,
+      check: chess.inCheck(),
+      maia_values: {},
+    },
+  ]
+
+  const tree = new GameTree(fen)
+
+  return {
+    id: id || `custom-fen-${Date.now()}`,
+    blackPlayer: { name: 'Black', rating: undefined },
+    whitePlayer: { name: 'White', rating: undefined },
+    moves,
+    availableMoves: [{}],
+    gameType: 'custom',
+    termination: {
+      result: '*',
+      winner: 'none',
+      condition: 'Normal',
+    },
+    maiaEvaluations: [{}],
+    stockfishEvaluations: [undefined],
+    tree,
+    type: 'custom-fen' as const,
+  } as AnalyzedGame
+}
+
+export const getAnalyzedCustomFEN = async (
+  fen: string,
+  name?: string,
+): Promise<AnalyzedGame> => {
+  const { saveCustomAnalysis } = await import('src/utils/customAnalysis')
+
+  const stored = saveCustomAnalysis('fen', fen, name)
+
+  return createAnalyzedGameFromFEN(fen, stored.id)
+}
+
+export const getAnalyzedCustomGame = async (
+  id: string,
+): Promise<AnalyzedGame> => {
+  const { getCustomAnalysisById } = await import('src/utils/customAnalysis')
+
+  const stored = getCustomAnalysisById(id)
+  if (!stored) {
+    throw new Error('Custom analysis not found')
+  }
+
+  if (stored.type === 'custom-pgn') {
+    return createAnalyzedGameFromPGN(stored.data, stored.id)
+  } else {
+    return createAnalyzedGameFromFEN(stored.data, stored.id)
+  }
+}
+
 export const getAnalyzedUserGame = async (
   id: string,
   game_type: 'play' | 'hand' | 'brain',

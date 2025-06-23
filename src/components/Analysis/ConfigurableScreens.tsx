@@ -11,6 +11,7 @@ interface Props {
   MAIA_MODELS: string[]
   game: AnalyzedGame
   currentNode: GameNode
+  onDeleteCustomGame?: () => void
 }
 
 export const ConfigurableScreens: React.FC<Props> = ({
@@ -20,6 +21,7 @@ export const ConfigurableScreens: React.FC<Props> = ({
   MAIA_MODELS,
   game,
   currentNode,
+  onDeleteCustomGame,
 }) => {
   const screens = [
     {
@@ -72,6 +74,8 @@ export const ConfigurableScreens: React.FC<Props> = ({
             setCurrentMaiaModel={setCurrentMaiaModel}
             launchContinue={launchContinue}
             MAIA_MODELS={MAIA_MODELS}
+            game={game}
+            onDeleteCustomGame={onDeleteCustomGame}
           />
         ) : screen.id === 'export' ? (
           <div className="flex w-full flex-col p-4">

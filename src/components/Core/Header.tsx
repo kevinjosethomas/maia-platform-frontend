@@ -57,7 +57,7 @@ export const Header: React.FC = () => {
         <p className="text-sm">{user?.displayName}</p>
         <p className="text-xs text-secondary">View Info</p>
       </div>
-      <div className="absolute bottom-[100%] left-0 z-10 hidden w-full overflow-hidden rounded bg-background-2 group-hover:flex group-hover:flex-col md:bottom-auto md:top-[100%]">
+      <div className="absolute bottom-[100%] left-0 z-50 hidden w-full overflow-hidden rounded bg-background-2 group-hover:flex group-hover:flex-col md:bottom-auto md:top-[100%]">
         <Link
           href="/profile"
           className="flex w-full items-center justify-start px-3 py-2 hover:bg-background-3"

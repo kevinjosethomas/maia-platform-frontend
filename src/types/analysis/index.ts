@@ -1,7 +1,14 @@
 import { Game } from '../base'
 import { AvailableMoves } from '../training'
 
-type EvaluationType = 'tournament' | 'pgn' | 'play' | 'hand' | 'brain'
+type EvaluationType =
+  | 'tournament'
+  | 'pgn'
+  | 'play'
+  | 'hand'
+  | 'brain'
+  | 'custom-pgn'
+  | 'custom-fen'
 
 type StockfishEvaluations<T extends EvaluationType> = T extends 'tournament'
   ? MoveMap[]
@@ -20,7 +27,14 @@ export interface AnalysisTournamentGame {
 
 export interface AnalysisWebGame {
   id: string
-  type: 'tournament' | 'pgn' | 'play' | 'hand' | 'brain'
+  type:
+    | 'tournament'
+    | 'pgn'
+    | 'play'
+    | 'hand'
+    | 'brain'
+    | 'custom-pgn'
+    | 'custom-fen'
   label: string
   result: string
   pgn?: string
@@ -32,6 +46,12 @@ export interface AnalyzedGame extends Game {
   availableMoves: AvailableMoves[]
   type: EvaluationType
   pgn?: string
+}
+
+export interface CustomAnalysisInput {
+  type: 'custom-pgn' | 'custom-fen'
+  data: string // PGN string or FEN string
+  name?: string
 }
 
 export interface Termination {

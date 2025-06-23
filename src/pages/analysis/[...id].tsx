@@ -13,6 +13,9 @@ import {
   getAnalyzedUserGame,
   getAnalyzedLichessGame,
   getAnalyzedTournamentGame,
+  getAnalyzedCustomPGN,
+  getAnalyzedCustomFEN,
+  getAnalyzedCustomGame,
 } from 'src/api'
 import {
   AnalyzedGame,
@@ -38,6 +41,7 @@ import {
   MovesContainer,
   BoardController,
   PromotionOverlay,
+  CustomAnalysisModal,
 } from 'src/components'
 import Head from 'next/head'
 import toast from 'react-hot-toast'
@@ -157,11 +161,65 @@ const AnalysisPage: NextPage = () => {
     [],
   )
 
+  const getAndSetCustomGame = useCallback(
+    async (id: string, setCurrentMove?: Dispatch<SetStateAction<number>>) => {
+      let game
+      try {
+        game = await getAnalyzedCustomGame(id)
+      } catch (e) {
+        toast.error((e as Error).message)
+        return
+      }
+      if (setCurrentMove) setCurrentMove(0)
+
+      setAnalyzedGame(game)
+      setCurrentId([id])
+
+      router.push(`/analysis/${id}`, undefined, {
+        shallow: true,
+      })
+    },
+    [router],
+  )
+
+  const getAndSetCustomAnalysis = useCallback(
+    async (type: 'pgn' | 'fen', data: string, name?: string) => {
+      let game: AnalyzedGame
+      try {
+        if (type === 'pgn') {
+          game = await getAnalyzedCustomPGN(data, name)
+        } else {
+          game = await getAnalyzedCustomFEN(data, name)
+        }
+      } catch (e) {
+        toast.error((e as Error).message)
+        return
+      }
+
+      setAnalyzedGame(game)
+      setCurrentId([game.id])
+
+      router.push(`/analysis/${game.id}`, undefined, {
+        shallow: true,
+      })
+    },
+    [router],
+  )
+
   useEffect(() => {
     ;(async () => {
       if (analyzedGame == undefined) {
         const queryId = id as string[]
-        if (queryId[1] === 'pgn') {
+        if (queryId[0]?.startsWith('custom-')) {
+          try {
+            const game = await getAnalyzedCustomGame(queryId[0])
+            setAnalyzedGame(game)
+            setCurrentId(queryId)
+          } catch (e) {
+            console.error('Failed to load custom analysis:', e)
+            toast.error('Custom analysis not found')
+          }
+        } else if (queryId[1] === 'pgn') {
           const pgn = await getLichessGamePGN(queryId[0])
           getAndSetLichessGame(queryId[0], pgn, undefined)
         } else if (['play', 'hand', 'brain'].includes(queryId[1])) {
@@ -188,6 +246,9 @@ const AnalysisPage: NextPage = () => {
           getAndSetTournamentGame={getAndSetTournamentGame}
           getAndSetLichessGame={getAndSetLichessGame}
           getAndSetUserGame={getAndSetUserGame}
+          getAndSetCustomGame={getAndSetCustomGame}
+          getAndSetCustomAnalysis={getAndSetCustomAnalysis}
+          router={router}
         />
       ) : (
         <Loading />
@@ -214,6 +275,16 @@ interface Props {
     type: 'play' | 'hand' | 'brain',
     setCurrentMove?: Dispatch<SetStateAction<number>>,
   ) => Promise<void>
+  getAndSetCustomGame: (
+    id: string,
+    setCurrentMove?: Dispatch<SetStateAction<number>>,
+  ) => Promise<void>
+  getAndSetCustomAnalysis: (
+    type: 'pgn' | 'fen',
+    data: string,
+    name?: string,
+  ) => Promise<void>
+  router: ReturnType<typeof useRouter>
 }
 
 const Analysis: React.FC<Props> = ({
@@ -222,6 +293,9 @@ const Analysis: React.FC<Props> = ({
   getAndSetTournamentGame,
   getAndSetLichessGame,
   getAndSetUserGame,
+  getAndSetCustomGame,
+  getAndSetCustomAnalysis,
+  router,
 }: Props) => {
   const screens = [
     {
@@ -245,6 +319,8 @@ const Analysis: React.FC<Props> = ({
   const [promotionFromTo, setPromotionFromTo] = useState<
     [string, string] | null
   >(null)
+  const [showCustomModal, setShowCustomModal] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   const controller = useAnalysisController(analyzedGame)
 
@@ -282,6 +358,27 @@ const Analysis: React.FC<Props> = ({
 
     window.open(url)
   }, [controller.currentNode])
+
+  const handleCustomAnalysis = useCallback(
+    async (type: 'pgn' | 'fen', data: string, name?: string) => {
+      setShowCustomModal(false)
+      await getAndSetCustomAnalysis(type, data, name)
+      setRefreshTrigger((prev) => prev + 1)
+    },
+    [getAndSetCustomAnalysis],
+  )
+
+  const handleDeleteCustomGame = useCallback(async () => {
+    if (
+      analyzedGame.type === 'custom-pgn' ||
+      analyzedGame.type === 'custom-fen'
+    ) {
+      const { deleteCustomAnalysis } = await import('src/utils/customAnalysis')
+      deleteCustomAnalysis(analyzedGame.id)
+      toast.success('Custom analysis deleted')
+      router.push('/analysis')
+    }
+  }, [analyzedGame, router])
 
   useEffect(() => {
     const arr = []
@@ -535,6 +632,11 @@ const Analysis: React.FC<Props> = ({
               loadNewUserGames={(id, type, setCurrentMove) =>
                 getAndSetUserGame(id, type, setCurrentMove)
               }
+              loadNewCustomGame={(id, setCurrentMove) =>
+                getAndSetCustomGame(id, setCurrentMove)
+              }
+              onCustomAnalysis={() => setShowCustomModal(true)}
+              refreshTrigger={refreshTrigger}
             />
           </div>
           <div className="flex h-1/2 w-full flex-1 flex-col gap-2">
@@ -616,6 +718,7 @@ const Analysis: React.FC<Props> = ({
             MAIA_MODELS={MAIA_MODELS}
             game={analyzedGame}
             currentNode={controller.currentNode as GameNode}
+            onDeleteCustomGame={handleDeleteCustomGame}
           />
         </div>
         <div
@@ -706,6 +809,14 @@ const Analysis: React.FC<Props> = ({
                     getAndSetUserGame(id, type, setCurrentMove),
                   )
                 }
+                loadNewCustomGame={(id, setCurrentMove) =>
+                  loadGameAndCloseList(getAndSetCustomGame(id, setCurrentMove))
+                }
+                onCustomAnalysis={() => {
+                  setShowCustomModal(true)
+                  setShowGameListMobile(false)
+                }}
+                refreshTrigger={refreshTrigger}
               />
             </div>
           </div>
@@ -799,6 +910,7 @@ const Analysis: React.FC<Props> = ({
               launchContinue={launchContinue}
               MAIA_MODELS={MAIA_MODELS}
               game={analyzedGame}
+              onDeleteCustomGame={handleDeleteCustomGame}
               currentNode={controller.currentNode as GameNode}
             />
           </div>
@@ -834,6 +946,14 @@ const Analysis: React.FC<Props> = ({
       <TreeControllerContext.Provider value={controller}>
         {analyzedGame && (isMobile ? mobileLayout : desktopLayout)}
       </TreeControllerContext.Provider>
+      <AnimatePresence>
+        {showCustomModal && (
+          <CustomAnalysisModal
+            onSubmit={handleCustomAnalysis}
+            onClose={() => setShowCustomModal(false)}
+          />
+        )}
+      </AnimatePresence>
     </>
   )
 }
