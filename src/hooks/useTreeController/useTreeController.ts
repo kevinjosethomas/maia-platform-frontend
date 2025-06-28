@@ -1,5 +1,5 @@
 import { Color, GameTree, GameNode } from 'src/types'
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 
 export const useTreeController = (
   gameTree: GameTree,

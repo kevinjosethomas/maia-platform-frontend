@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Chess } from 'chess.ts'
 import { GameNode, MaiaEvaluation, StockfishEvaluation } from 'src/types'
 import { MAIA_MODELS } from './constants'
 
@@ -103,40 +104,75 @@ export const useMoveRecommendations = (
   }, [currentMaiaModel, moveEvaluation, currentNode])
 
   const moveMap = useMemo(() => {
-    if (!moveEvaluation?.maia || !moveEvaluation?.stockfish) {
+    if (!moveEvaluation?.maia || !moveEvaluation?.stockfish || !currentNode) {
       return
     }
 
-    const maia = Object.fromEntries(
-      Object.entries(moveEvaluation.maia.policy).slice(0, 3),
-    )
+    // Get ALL legal moves from the current position
+    const chess = new Chess(currentNode.fen)
+    const legalMoves = chess.moves({ verbose: true })
 
-    const stockfishMoves = Object.entries(moveEvaluation.stockfish.cp_vec)
-
-    const topStockfish = Object.fromEntries(stockfishMoves.slice(0, 3))
-
-    const moves = Array.from(
-      new Set([...Object.keys(maia), ...Object.keys(topStockfish)]),
+    // Create a set of all legal moves in UCI format
+    const allLegalMoves = new Set(
+      legalMoves.map((move) => `${move.from}${move.to}${move.promotion || ''}`),
     )
 
     const data = []
 
-    for (const move of moves) {
-      const cp = Math.max(
-        -4,
-        moveEvaluation.stockfish.cp_relative_vec[move] / 100,
+    // Include all legal moves, not just top ones
+    for (const move of allLegalMoves) {
+      // Get Stockfish evaluation (default to worst possible if not evaluated)
+      const cp =
+        moveEvaluation.stockfish.cp_relative_vec[move] !== undefined
+          ? Math.max(-4, moveEvaluation.stockfish.cp_relative_vec[move] / 100)
+          : -4 // Worst possible Stockfish evaluation
+
+      // Get Maia probability (default to 0 if not in policy)
+      const prob = (moveEvaluation.maia.policy[move] || 0) * 100
+
+      // Calculate opacity based on position quality
+      // Moves in bottom-left (worse SF, less likely Maia) should be more transparent
+      // Normalize values: cp ranges from -4 to 0, prob ranges from 0 to ~100
+      const normalizedCp = (cp + 4) / 4 // 0 to 1 (0 = worst, 1 = best)
+      const normalizedProb = Math.min(prob / 50, 1) // 0 to 1 (capped at 50% for normalization)
+
+      // Combine both factors for opacity (minimum 0.2 for visibility, maximum 1.0)
+      const opacity = Math.max(
+        0.2,
+        Math.min(1.0, (normalizedCp + normalizedProb) / 2),
       )
-      const prob = moveEvaluation?.maia.policy[move] * 100
+
+      // Calculate importance score for sorting (higher = more important)
+      // This combines normalized Stockfish evaluation and Maia probability
+      const importance = normalizedCp + normalizedProb
+
+      // Calculate dynamic size based on importance (bigger = more important)
+      // Increased size range from 4-12 to 6-16 for better visibility
+      const size = Math.max(6, Math.min(16, 6 + importance * 6)) // 6-16px range
+
+      // Get additional data for comprehensive tooltip
+      const rawCp = moveEvaluation.stockfish.cp_vec[move] || 0
+      const winrate = moveEvaluation.stockfish.winrate_vec?.[move] || 0
+      const rawMaiaProb = moveEvaluation.maia.policy[move] || 0
 
       data.push({
         move,
         x: cp,
         y: prob,
+        opacity,
+        importance,
+        size,
+        // Additional data for tooltip
+        rawCp,
+        winrate,
+        rawMaiaProb,
+        relativeCp: cp,
       })
     }
 
-    return data
-  }, [moveEvaluation])
+    // Sort by importance (ascending) so more important moves are rendered last (on top)
+    return data.sort((a, b) => a.importance - b.importance)
+  }, [moveEvaluation, currentNode])
 
   return {
     recommendations,

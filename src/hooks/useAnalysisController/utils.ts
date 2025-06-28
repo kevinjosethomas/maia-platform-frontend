@@ -213,18 +213,44 @@ export const calculateBlunderMeter = (
       }
     }
   }
+  const rawPercentages = [
+    { key: 'good', value: goodMoveProbability },
+    { key: 'ok', value: okMoveProbability },
+    { key: 'blunder', value: blunderMoveProbability },
+  ]
+
+  const flooredPercentages = rawPercentages.map((p) => ({
+    ...p,
+    floored: Math.floor(p.value),
+    fractional: p.value - Math.floor(p.value),
+  }))
+
+  const totalFloored = flooredPercentages.reduce((sum, p) => sum + p.floored, 0)
+  const remainingPoints = 100 - totalFloored
+
+  const sortedByFractional = [...flooredPercentages].sort(
+    (a, b) => b.fractional - a.fractional,
+  )
+
+  for (let i = 0; i < remainingPoints; i++) {
+    sortedByFractional[i].floored += 1
+  }
+
+  const adjustedGood = sortedByFractional.find((p) => p.key === 'good')
+  const adjustedOk = sortedByFractional.find((p) => p.key === 'ok')
+  const adjustedBlunder = sortedByFractional.find((p) => p.key === 'blunder')
 
   return {
     blunderMoves: {
-      probability: blunderMoveProbability,
+      probability: adjustedBlunder?.floored || 0,
       moves: blunderMoveChanceInfo,
     },
     okMoves: {
-      probability: okMoveProbability,
+      probability: adjustedOk?.floored || 0,
       moves: okMoveChanceInfo,
     },
     goodMoves: {
-      probability: goodMoveProbability,
+      probability: adjustedGood?.floored || 0,
       moves: goodMoveChanceInfo,
     },
   }

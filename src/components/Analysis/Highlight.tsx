@@ -1,6 +1,6 @@
-import { Tooltip } from 'react-tooltip'
 import { useState, useEffect, useRef } from 'react'
 import { MovesByRating } from './MovesByRating'
+import { MoveTooltip } from './MoveTooltip'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MaiaEvaluation, StockfishEvaluation, ColorSanMapping } from 'src/types'
 
@@ -37,6 +37,16 @@ export const Highlight: React.FC<Props> = ({
   currentMaiaModel,
   boardDescription,
 }: Props) => {
+  // Tooltip state
+  const [tooltipData, setTooltipData] = useState<{
+    move: string
+    maiaProb?: number
+    stockfishCp?: number
+    stockfishWinrate?: number
+    stockfishLoss?: number
+    position: { x: number; y: number }
+  } | null>(null)
+
   const findMatchingMove = (move: string, source: 'maia' | 'stockfish') => {
     if (source === 'maia') {
       return recommendations.stockfish?.find((rec) => rec.move === move)
@@ -45,13 +55,17 @@ export const Highlight: React.FC<Props> = ({
     }
   }
 
-  const getTooltipContent = (
+  const handleMouseEnter = (
     move: string,
     source: 'maia' | 'stockfish',
+    event: React.MouseEvent,
     prob?: number,
     cp?: number,
     winrate?: number,
+    winrateLoss?: number,
   ) => {
+    hover(move)
+
     const matchingMove = findMatchingMove(move, source)
     const maiaProb =
       source === 'maia' ? prob : (matchingMove as { prob: number })?.prob
@@ -61,44 +75,30 @@ export const Highlight: React.FC<Props> = ({
       source === 'stockfish'
         ? winrate
         : (matchingMove as { winrate?: number })?.winrate
+    const stockfishLoss =
+      source === 'stockfish'
+        ? winrateLoss
+        : (matchingMove as { winrate_loss?: number })?.winrate_loss
 
-    return (
-      <div className="flex flex-col gap-1 overflow-hidden rounded border border-background-2 bg-backdrop">
-        <div className="flex items-center bg-backdrop px-3 py-1.5">
-          <span
-            style={{
-              color: colorSanMapping[move]?.color ?? '#fff',
-            }}
-            className="font-medium"
-          >
-            {colorSanMapping[move]?.san ?? move}
-          </span>
-        </div>
-        <div className="flex flex-col items-start justify-start gap-1 bg-background-1/80 px-3 py-1.5 text-sm">
-          {maiaProb !== undefined && (
-            <div className="flex w-full items-center justify-between gap-2 font-mono">
-              <span className="text-human-3">Maia:</span>
-              <span>{(Math.round(maiaProb * 1000) / 10).toFixed(1)}%</span>
-            </div>
-          )}
-          {stockfishCp !== undefined && (
-            <div className="flex w-full items-center justify-between gap-2 font-mono">
-              <span className="text-engine-3">SF Eval:</span>
-              <span>
-                {stockfishCp > 0 ? '+' : ''}
-                {(stockfishCp / 100).toFixed(2)}
-              </span>
-            </div>
-          )}
-          {stockfishWinrate !== undefined && (
-            <div className="flex w-full items-center justify-between gap-2 font-mono">
-              <span className="text-engine-3">SF Winrate:</span>
-              <span>{(stockfishWinrate * 100).toFixed(1)}%</span>
-            </div>
-          )}
-        </div>
-      </div>
-    )
+    // Get Stockfish loss from the move evaluation if not provided
+    const actualStockfishLoss =
+      stockfishLoss !== undefined
+        ? stockfishLoss
+        : moveEvaluation?.stockfish?.winrate_loss_vec?.[move]
+
+    setTooltipData({
+      move,
+      maiaProb,
+      stockfishCp,
+      stockfishWinrate,
+      stockfishLoss: actualStockfishLoss,
+      position: { x: event.clientX, y: event.clientY },
+    })
+  }
+
+  const handleMouseLeave = () => {
+    hover()
+    setTooltipData(null)
   }
 
   // Track whether description exists (not its content)
@@ -146,17 +146,6 @@ export const Highlight: React.FC<Props> = ({
           </div>
         </div>
         <div className="grid grid-cols-2">
-          <Tooltip
-            place="bottom"
-            id="move-tooltip"
-            noArrow={true}
-            className="!z-50 !bg-none !p-0 !opacity-100"
-            render={({ content }) => {
-              if (!content) return null
-              const { move, source, prob, cp, winrate } = JSON.parse(content)
-              return getTooltipContent(move, source, prob, cp, winrate)
-            }}
-          />
           <div className="grid grid-rows-2 items-center justify-center p-3">
             {recommendations.maia?.slice(0, 4).map(({ move, prob }, index) => {
               return (
@@ -166,15 +155,9 @@ export const Highlight: React.FC<Props> = ({
                   style={{
                     color: colorSanMapping[move]?.color ?? '#fff',
                   }}
-                  onMouseLeave={() => hover()}
-                  onMouseEnter={() => hover(move)}
+                  onMouseLeave={handleMouseLeave}
+                  onMouseEnter={(e) => handleMouseEnter(move, 'maia', e, prob)}
                   onClick={() => makeMove(move)}
-                  data-tooltip-id="move-tooltip"
-                  data-tooltip-content={JSON.stringify({
-                    move,
-                    source: 'maia',
-                    prob,
-                  })}
                 >
                   <p className="text-right font-mono text-xs md:text-sm">
                     {(Math.round(prob * 1000) / 10).toFixed(1)}%
@@ -189,7 +172,7 @@ export const Highlight: React.FC<Props> = ({
           <div className="grid grid-rows-2 flex-col items-center justify-center p-3">
             {recommendations.stockfish
               ?.slice(0, 4)
-              .map(({ move, cp, winrate }, index) => {
+              .map(({ move, cp, winrate, winrate_loss }, index) => {
                 return (
                   <button
                     key={index}
@@ -197,16 +180,19 @@ export const Highlight: React.FC<Props> = ({
                     style={{
                       color: colorSanMapping[move]?.color ?? '#fff',
                     }}
-                    onMouseLeave={() => hover()}
-                    onMouseEnter={() => hover(move)}
+                    onMouseLeave={handleMouseLeave}
+                    onMouseEnter={(e) =>
+                      handleMouseEnter(
+                        move,
+                        'stockfish',
+                        e,
+                        undefined,
+                        cp,
+                        winrate,
+                        winrate_loss,
+                      )
+                    }
                     onClick={() => makeMove(move)}
-                    data-tooltip-id="move-tooltip"
-                    data-tooltip-content={JSON.stringify({
-                      move,
-                      source: 'stockfish',
-                      cp,
-                      winrate,
-                    })}
                   >
                     <p className="w-[42px] text-right font-mono text-xs md:text-sm">
                       {cp > 0 ? '+' : null}
@@ -245,6 +231,19 @@ export const Highlight: React.FC<Props> = ({
           colorSanMapping={colorSanMapping}
         />
       </div>
+
+      {/* Tooltip */}
+      {tooltipData && (
+        <MoveTooltip
+          move={tooltipData.move}
+          colorSanMapping={colorSanMapping}
+          maiaProb={tooltipData.maiaProb}
+          stockfishCp={tooltipData.stockfishCp}
+          stockfishWinrate={tooltipData.stockfishWinrate}
+          stockfishLoss={tooltipData.stockfishLoss}
+          position={tooltipData.position}
+        />
+      )}
     </div>
   )
 }

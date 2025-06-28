@@ -73,7 +73,11 @@ export const ExportGame: React.FC<Props> = (props) => {
       }
     }
 
-    setPgn(gameTree.toPGN())
+    const originalMoves = gameTree.toMoveArray()
+    const originalTimes = gameTree.toTimeArray()
+    tree.addMovesToMainLine(originalMoves, originalTimes)
+
+    setPgn(tree.toPGN())
     setFen(currentNode.fen)
   }, [
     currentNode,

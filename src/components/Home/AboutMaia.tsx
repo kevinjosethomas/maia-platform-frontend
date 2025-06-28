@@ -77,8 +77,126 @@ const teamMembers = [
   },
 ]
 
+const researchPapers = {
+  maia1: {
+    title:
+      'Aligning Superhuman AI with Human Behavior: Chess as a Model System',
+    link: 'https://www.cs.toronto.edu/~ashton/pubs/maia-kdd2020.pdf',
+    description:
+      'This paper introduces Maia, a chess engine trained to imitate real human moves at different rating levels. Instead of always picking the best move, Maia predicts what a human player of a given skill would actually play. This makes it ideal for training, game analysis, and even coaching, as it helps players learn from realistic decisions rather than computer perfection. It was the first AI to prioritize human-likeness over engine strength, making it a powerful tool for improvement.',
+  },
+  maia2: {
+    title: 'Maia‑2: A Unified Model for Human‑AI Alignment in Chess',
+    link: 'https://www.cs.toronto.edu/~ashton/pubs/maia2-neurips2024.pdf',
+    description:
+      "Maia‑2 is the evolution of Maia into a single model that can simulate any skill level in chess. Instead of using separate models for different ratings, it understands and adapts to your level in real time. Whether you're a beginner or a master, Maia‑2 predicts the moves players like you would actually make. It's built to feel human, teach naturally, and support personalized analysis without needing to toggle between bots.",
+  },
+  others: [
+    {
+      title: 'Learning Personalized Models of Human Behavior in Chess',
+      link: 'https://www.cs.toronto.edu/~ashton/pubs/maia-personalized2021.pdf',
+      description:
+        'Creates a version of Maia that learns your individual playing style and mirrors the way you think on the board.',
+    },
+    {
+      title:
+        'Detecting Individual Decision‑Making Style: Exploring Behavioral Stylometry in Chess',
+      link: 'https://www.cs.toronto.edu/~ashton/pubs/maia-personalized2021.pdf',
+      description:
+        'Shows that your chess style is as unique as a fingerprint, allowing the model to recognize you just by your move choices.',
+    },
+    {
+      title: 'Learning Models of Individual Behavior in Chess',
+      link: 'https://www.cs.toronto.edu/~ashton/pubs/maia-personalized2021.pdf',
+      description:
+        'Extends personalized Maia to thousands of players, showing it can consistently capture how real people play across the rating ladder.',
+    },
+    {
+      title:
+        'Designing Skill‑Compatible AI: Methodologies and Frameworks in Chess',
+      link: 'https://www.cs.toronto.edu/~ashton/pubs/maia-partner-iclr24.pdf',
+      description:
+        'Explains how to build training bots that play at your level and support fair, instructive, and enjoyable games.',
+    },
+  ],
+}
+
+const PaperCard = ({
+  paper,
+  featured = false,
+  className = '',
+}: {
+  paper: typeof researchPapers.maia1
+  featured?: boolean
+  className?: string
+}) => (
+  <motion.div
+    className={`group relative flex h-full flex-col rounded-lg bg-background-1 transition-all duration-200 ${featured ? '' : 'hover:scale-[1.02]'} ${className} ${featured ? 'overflow-hidden' : 'p-6'}`}
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.4 }}
+  >
+    <div
+      className={`absolute ${featured ? 'right-4 top-4 z-10' : 'right-4 top-4'}`}
+    >
+      <span className="material-symbols-outlined text-sm text-primary/60">
+        arrow_outward
+      </span>
+    </div>
+    {featured && (
+      <div className="aspect-[4/3] w-full overflow-hidden">
+        <img
+          src={`/assets/papers/${paper.title.includes('Maia‑2') ? 'maia2' : 'maia1'}.jpg`}
+          alt={`${paper.title} paper preview`}
+          className="h-full w-full object-cover object-top"
+        />
+      </div>
+    )}
+    <div className={`flex flex-1 flex-col items-start justify-between`}>
+      <div className={`flex flex-col ${featured ? 'p-6' : ''}`}>
+        <h4
+          className={`pr-6 font-bold leading-tight ${featured ? 'text-center text-base' : 'text-left text-lg'}`}
+        >
+          {paper.title}
+        </h4>
+        <p
+          className={`mt-3 text-sm text-primary/80 ${featured ? 'text-center leading-relaxed' : 'text-left'}`}
+        >
+          {paper.description}
+        </p>
+      </div>
+      {featured && (
+        <a
+          href={paper.link}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-auto inline-flex w-full items-center justify-center bg-human-4/80 px-5 py-3 font-medium text-primary transition duration-200 hover:bg-human-4"
+        >
+          Read {paper.title.includes('Maia‑2') ? 'Maia 2' : 'Maia 1'} Paper
+        </a>
+      )}
+    </div>
+
+    {!featured && (
+      <a
+        href={paper.link}
+        target="_blank"
+        rel="noreferrer"
+        className="absolute inset-0 rounded-lg"
+        aria-label={`Read paper: ${paper.title}`}
+      />
+    )}
+  </motion.div>
+)
+
 export const AboutMaia = () => {
   const [projectRef, projectInView] = useInView({
+    triggerOnce: false,
+    threshold: 0.2,
+  })
+
+  const [researchRef, researchInView] = useInView({
     triggerOnce: false,
     threshold: 0.2,
   })
@@ -94,10 +212,10 @@ export const AboutMaia = () => {
   })
 
   return (
-    <div className="font-helvetica [&_a]:text-human-3">
+    <div>
       <section
         id="main_info"
-        className="relative flex flex-col items-center justify-center bg-background-1 py-20 text-center"
+        className="relative flex flex-col items-center justify-center bg-background-2 py-20 text-center"
         ref={projectRef}
       >
         <div className="flex max-w-3xl flex-col items-center justify-center px-4 md:px-0">
@@ -130,31 +248,31 @@ export const AboutMaia = () => {
               Maia 2 in our paper that appeared at NeurIPS 2024.
             </p>
           </div>
-          <br />
-          <div className="flex items-center justify-center gap-2">
-            <a
-              target="_blank"
-              rel="noreferrer"
-              href="https://arxiv.org/pdf/2006.01855"
-              className="rounded bg-human-3 px-6 py-2 !text-primary transition duration-200 hover:bg-human-4"
-            >
-              Read Maia-1 Paper
-            </a>
-            <a
-              target="_blank"
-              rel="noreferrer"
-              href="https://www.cs.toronto.edu/~ashton/pubs/maia2-neurips2024.pdf"
-              className="rounded bg-human-3 px-6 py-2 !text-primary transition duration-200 hover:bg-human-4"
-            >
-              Read Maia-2 Paper
-            </a>
+        </div>
+        <div className="mx-auto max-w-7xl px-4 pt-16">
+          <div className="grid gap-6 md:grid-cols-3">
+            <PaperCard
+              paper={researchPapers.maia1}
+              featured={true}
+              className=""
+            />
+            <PaperCard
+              paper={researchPapers.maia2}
+              featured={true}
+              className=""
+            />
+            <div className="flex flex-col gap-4">
+              {researchPapers.others.map((paper, index) => (
+                <PaperCard key={index} paper={paper} className="flex-1" />
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       <section
         id="team_info"
-        className="relative overflow-hidden bg-background-2 py-16"
+        className="relative overflow-hidden bg-background-1 py-16"
         ref={teamRef}
       >
         <div className="relative z-10 mx-auto my-0 max-w-[1200px]">
@@ -170,7 +288,7 @@ export const AboutMaia = () => {
       </section>
 
       <section
-        className="relative flex flex-col items-center justify-center gap-2 overflow-hidden bg-background-1 py-20"
+        className="relative flex flex-col items-center justify-center gap-2 overflow-hidden bg-background-2 py-20"
         ref={acknowledgementsRef}
       >
         <h3 className="text-center text-xl font-bold uppercase">

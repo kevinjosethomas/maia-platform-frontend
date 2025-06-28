@@ -13,7 +13,6 @@ import {
   WindowSizeContextProvider,
   AnalysisListContextProvider,
 } from 'src/providers'
-import 'src/styles/globals.scss'
 import 'src/styles/tailwind.css'
 import 'react-tooltip/dist/react-tooltip.css'
 import 'node_modules/chessground/assets/chessground.base.css'

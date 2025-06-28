@@ -49,7 +49,6 @@ export class GameTree {
 
     this.headers.forEach((value, key) => {
       chess.addHeader(key, value)
-      chess.addHeader(key, value)
     })
 
     let complete = false
@@ -378,7 +377,7 @@ export class GameNode {
 
     if (
       this._analysis.stockfish &&
-      this._analysis.stockfish.depth >= 15 &&
+      this._analysis.stockfish.depth >= 13 &&
       move
     ) {
       this.classifyMoveByWinrate(
@@ -399,7 +398,7 @@ export class GameNode {
     this._analysis.maia = maiaEval
 
     // Check if any existing children could be unlikely good moves
-    if (this._analysis.stockfish && this._analysis.stockfish.depth >= 15) {
+    if (this._analysis.stockfish && this._analysis.stockfish.depth >= 13) {
       for (const child of this._children) {
         if (child.move) {
           const winrate_loss =
@@ -424,7 +423,7 @@ export class GameNode {
   ): void {
     this._analysis.stockfish = stockfishEval
 
-    if (stockfishEval.depth >= 15) {
+    if (stockfishEval.depth >= 13) {
       for (const child of this._children) {
         if (child.move) {
           this.classifyMoveByWinrate(

@@ -1,14 +1,23 @@
-import React, { useContext } from 'react'
+import React, { useContext, useState } from 'react'
 import { motion } from 'framer-motion'
 
 import { BlunderMeterResult, ColorSanMapping } from 'src/types'
 import { WindowSizeContext } from 'src/contexts'
+import { MoveTooltip } from './MoveTooltip'
 
 interface Props {
   data: BlunderMeterResult
   colorSanMapping: ColorSanMapping
   hover: (move?: string) => void
   makeMove: (move: string) => void
+  moveEvaluation?: {
+    maia?: { policy: { [key: string]: number } }
+    stockfish?: {
+      cp_vec: { [key: string]: number }
+      winrate_vec?: { [key: string]: number }
+      winrate_loss_vec?: { [key: string]: number }
+    }
+  } | null
 }
 
 export const BlunderMeter: React.FC<Props> = ({
@@ -16,6 +25,7 @@ export const BlunderMeter: React.FC<Props> = ({
   hover,
   makeMove,
   colorSanMapping,
+  moveEvaluation,
 }: Props) => {
   const { isMobile } = useContext(WindowSizeContext)
 
@@ -25,6 +35,7 @@ export const BlunderMeter: React.FC<Props> = ({
       hover={hover}
       makeMove={makeMove}
       colorSanMapping={colorSanMapping}
+      moveEvaluation={moveEvaluation}
     />
   ) : (
     <DesktopBlunderMeter
@@ -32,6 +43,7 @@ export const BlunderMeter: React.FC<Props> = ({
       hover={hover}
       makeMove={makeMove}
       colorSanMapping={colorSanMapping}
+      moveEvaluation={moveEvaluation}
     />
   )
 }
@@ -41,6 +53,7 @@ const DesktopBlunderMeter: React.FC<Props> = ({
   hover,
   makeMove,
   colorSanMapping,
+  moveEvaluation,
 }: Props) => {
   return (
     <div className="flex h-64 max-h-full w-full flex-col gap-2 overflow-hidden rounded bg-background-1/60 p-3 md:h-full md:w-auto md:min-w-[40%] md:max-w-[40%]">
@@ -56,6 +69,7 @@ const DesktopBlunderMeter: React.FC<Props> = ({
             bgColor="bg-[#1a9850] rounded-t"
             probability={data.goodMoves.probability}
             colorSanMapping={colorSanMapping}
+            moveEvaluation={moveEvaluation}
           />
           <Meter
             hover={hover}
@@ -66,6 +80,7 @@ const DesktopBlunderMeter: React.FC<Props> = ({
             textColor="text-[#fee08b]"
             probability={data.okMoves.probability}
             colorSanMapping={colorSanMapping}
+            moveEvaluation={moveEvaluation}
           />
           <Meter
             hover={hover}
@@ -76,6 +91,7 @@ const DesktopBlunderMeter: React.FC<Props> = ({
             moves={data.blunderMoves.moves}
             probability={data.blunderMoves.probability}
             colorSanMapping={colorSanMapping}
+            moveEvaluation={moveEvaluation}
           />
         </div>
       </div>
@@ -88,6 +104,7 @@ const MobileBlunderMeter: React.FC<Props> = ({
   hover,
   makeMove,
   colorSanMapping,
+  moveEvaluation,
 }: Props) => {
   return (
     <div className="flex w-full flex-col gap-2 overflow-hidden rounded bg-background-1/60 p-3">
@@ -135,6 +152,7 @@ const MobileBlunderMeter: React.FC<Props> = ({
             hover={hover}
             makeMove={makeMove}
             colorSanMapping={colorSanMapping}
+            moveEvaluation={moveEvaluation}
           />
           <MovesList
             title="Meh Moves"
@@ -143,6 +161,7 @@ const MobileBlunderMeter: React.FC<Props> = ({
             hover={hover}
             makeMove={makeMove}
             colorSanMapping={colorSanMapping}
+            moveEvaluation={moveEvaluation}
           />
           <MovesList
             title="Blunders"
@@ -151,6 +170,7 @@ const MobileBlunderMeter: React.FC<Props> = ({
             hover={hover}
             makeMove={makeMove}
             colorSanMapping={colorSanMapping}
+            moveEvaluation={moveEvaluation}
           />
         </div>
       </div>
@@ -165,6 +185,7 @@ function MovesList({
   hover,
   makeMove,
   colorSanMapping,
+  moveEvaluation,
 }: {
   title: string
   textColor: string
@@ -172,9 +193,35 @@ function MovesList({
   hover: (move?: string) => void
   makeMove: (move: string) => void
   colorSanMapping: ColorSanMapping
+  moveEvaluation?: {
+    maia?: { policy: { [key: string]: number } }
+    stockfish?: {
+      cp_vec: { [key: string]: number }
+      winrate_vec?: { [key: string]: number }
+      winrate_loss_vec?: { [key: string]: number }
+    }
+  } | null
 }) {
+  const [tooltipData, setTooltipData] = useState<{
+    move: string
+    position: { x: number; y: number }
+  } | null>(null)
+
   const filteredMoves = () => {
     return moves.slice(0, 6).filter((move) => move.probability >= 8)
+  }
+
+  const handleMouseEnter = (move: string, event: React.MouseEvent) => {
+    hover(move)
+    setTooltipData({
+      move,
+      position: { x: event.clientX, y: event.clientY },
+    })
+  }
+
+  const handleMouseLeave = () => {
+    hover()
+    setTooltipData(null)
   }
 
   return (
@@ -185,8 +232,8 @@ function MovesList({
           <button
             key={move.move}
             className="text-left hover:underline"
-            onMouseLeave={() => hover()}
-            onMouseEnter={() => hover(move.move)}
+            onMouseLeave={handleMouseLeave}
+            onMouseEnter={(e) => handleMouseEnter(move.move, e)}
             onClick={() => makeMove(move.move)}
           >
             {colorSanMapping[move.move]?.san || move.move} (
@@ -194,6 +241,23 @@ function MovesList({
           </button>
         ))}
       </div>
+
+      {/* Tooltip */}
+      {tooltipData && moveEvaluation && (
+        <MoveTooltip
+          move={tooltipData.move}
+          colorSanMapping={colorSanMapping}
+          maiaProb={moveEvaluation.maia?.policy[tooltipData.move]}
+          stockfishCp={moveEvaluation.stockfish?.cp_vec[tooltipData.move]}
+          stockfishWinrate={
+            moveEvaluation.stockfish?.winrate_vec?.[tooltipData.move]
+          }
+          stockfishLoss={
+            moveEvaluation.stockfish?.winrate_loss_vec?.[tooltipData.move]
+          }
+          position={tooltipData.position}
+        />
+      )}
     </div>
   )
 }
@@ -245,6 +309,7 @@ function Meter({
   textColor,
   probability,
   colorSanMapping,
+  moveEvaluation,
 }: {
   title: string
   textColor: string
@@ -254,9 +319,35 @@ function Meter({
   makeMove: (move: string) => void
   colorSanMapping: ColorSanMapping
   moves: { move: string; probability: number }[]
+  moveEvaluation?: {
+    maia?: { policy: { [key: string]: number } }
+    stockfish?: {
+      cp_vec: { [key: string]: number }
+      winrate_vec?: { [key: string]: number }
+      winrate_loss_vec?: { [key: string]: number }
+    }
+  } | null
 }) {
+  const [tooltipData, setTooltipData] = useState<{
+    move: string
+    position: { x: number; y: number }
+  } | null>(null)
+
   const filteredMoves = () => {
     return moves.slice(0, 6).filter((move) => move.probability >= 8)
+  }
+
+  const handleMouseEnter = (move: string, event: React.MouseEvent) => {
+    hover(move)
+    setTooltipData({
+      move,
+      position: { x: event.clientX, y: event.clientY },
+    })
+  }
+
+  const handleMouseLeave = () => {
+    hover()
+    setTooltipData(null)
   }
 
   return (
@@ -282,8 +373,8 @@ function Meter({
             <button
               key={move.move}
               className="text-left hover:underline"
-              onMouseLeave={() => hover()}
-              onMouseEnter={() => hover(move.move)}
+              onMouseLeave={handleMouseLeave}
+              onMouseEnter={(e) => handleMouseEnter(move.move, e)}
               onClick={() => makeMove(move.move)}
             >
               {colorSanMapping[move.move]?.san || move.move} (
@@ -292,6 +383,23 @@ function Meter({
           ))}
         </div>
       </div>
+
+      {/* Tooltip */}
+      {tooltipData && moveEvaluation && (
+        <MoveTooltip
+          move={tooltipData.move}
+          colorSanMapping={colorSanMapping}
+          maiaProb={moveEvaluation.maia?.policy[tooltipData.move]}
+          stockfishCp={moveEvaluation.stockfish?.cp_vec[tooltipData.move]}
+          stockfishWinrate={
+            moveEvaluation.stockfish?.winrate_vec?.[tooltipData.move]
+          }
+          stockfishLoss={
+            moveEvaluation.stockfish?.winrate_loss_vec?.[tooltipData.move]
+          }
+          position={tooltipData.position}
+        />
+      )}
     </motion.div>
   )
 }

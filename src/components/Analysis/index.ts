@@ -1,5 +1,6 @@
 export * from './MoveMap'
 export * from './MovePlot'
+export * from './MoveTooltip'
 export * from './Highlight'
 export * from './Tournament'
 export * from './UserGameList'

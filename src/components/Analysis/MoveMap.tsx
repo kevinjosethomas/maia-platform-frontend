@@ -4,23 +4,46 @@ import {
   XAxis,
   YAxis,
   Scatter,
-  LabelList,
   ScatterChart,
   CartesianGrid,
   ResponsiveContainer,
 } from 'recharts'
-import { useContext } from 'react'
+import { useContext, useState } from 'react'
 import { ColorSanMapping } from 'src/types'
 import type { Key } from 'chessground/types'
 import type { DrawShape } from 'chessground/draw'
 import { WindowSizeContext } from 'src/contexts'
-import { ContentType } from 'recharts/types/component/Label'
+import { MoveTooltip } from './MoveTooltip'
+
+interface MoveMapEntry {
+  move: string
+  x: number
+  y: number
+  opacity?: number
+  importance?: number
+  size?: number
+  rawCp?: number
+  winrate?: number
+  rawMaiaProb?: number
+  relativeCp?: number
+}
 
 interface Props {
-  moveMap?: { move: string; x: number; y: number }[]
+  moveMap?: MoveMapEntry[]
   colorSanMapping: ColorSanMapping
-
   setHoverArrow: React.Dispatch<React.SetStateAction<DrawShape | null>>
+}
+
+// Helper function to convert hex color to rgba with alpha
+const hexToRgba = (hex: string, alpha: number): string => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  if (!result) return hex
+
+  const r = parseInt(result[1], 16)
+  const g = parseInt(result[2], 16)
+  const b = parseInt(result[3], 16)
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
 export const MoveMap: React.FC<Props> = ({
@@ -29,8 +52,20 @@ export const MoveMap: React.FC<Props> = ({
   setHoverArrow,
 }: Props) => {
   const { isMobile } = useContext(WindowSizeContext)
+  const [hoveredMove, setHoveredMove] = useState<string | null>(null)
+  const [hoveredMoveData, setHoveredMoveData] = useState<MoveMapEntry | null>(
+    null,
+  )
+  const [mousePosition, setMousePosition] = useState<{
+    x: number
+    y: number
+  } | null>(null)
 
-  const onMouseEnter = (move: string) => {
+  const onMouseEnter = (
+    move: string,
+    moveData: MoveMapEntry,
+    event?: React.MouseEvent,
+  ) => {
     setHoverArrow({
       orig: move.slice(0, 2) as Key,
       dest: move.slice(2, 4) as Key,
@@ -39,12 +74,54 @@ export const MoveMap: React.FC<Props> = ({
         lineWidth: 10,
       },
     })
+    setHoveredMove(move)
+    setHoveredMoveData(moveData)
+
+    // Capture mouse position for tooltip positioning
+    if (event) {
+      // Get position relative to the viewport for better positioning
+      setMousePosition({
+        x: event.clientX,
+        y: event.clientY,
+      })
+    }
+  }
+
+  const onMouseLeave = () => {
+    setHoverArrow(null)
+    setHoveredMove(null)
+    setHoveredMoveData(null)
+    setMousePosition(null)
+  }
+
+  // Handle mouse leaving the entire component
+  const onContainerMouseLeave = () => {
+    onMouseLeave()
+  }
+
+  const renderTooltip = () => {
+    if (!hoveredMove || !hoveredMoveData || !mousePosition) return null
+
+    return (
+      <MoveTooltip
+        move={hoveredMove}
+        colorSanMapping={colorSanMapping}
+        maiaProb={hoveredMoveData.rawMaiaProb}
+        stockfishCp={hoveredMoveData.rawCp}
+        stockfishWinrate={hoveredMoveData.winrate}
+        stockfishLoss={hoveredMoveData.relativeCp}
+        position={mousePosition}
+      />
+    )
   }
 
   return (
-    <div className="flex h-64 max-h-full flex-col overflow-hidden bg-background-1/60 md:h-full md:rounded">
+    <div
+      className="flex h-64 max-h-full flex-col overflow-hidden bg-background-1/60 md:h-full md:rounded"
+      onMouseLeave={onContainerMouseLeave}
+    >
       <p className="p-3 text-primary md:text-lg">Move Map</p>
-      <div className="flex h-full w-full flex-col">
+      <div className="relative flex h-full w-full flex-col">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ left: 0, top: 5, right: 30, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#3C3C3C" />
@@ -132,56 +209,38 @@ export const MoveMap: React.FC<Props> = ({
                 dy={isMobile ? -30 : -56}
               />
             </YAxis>
-            <Scatter name="Moves" data={moveMap}>
-              <LabelList
-                dataKey="move"
-                position="top"
-                fontSize={isMobile ? 10 : 12}
-                fill="white"
-                content={
-                  (({
-                    x,
-                    y,
-                    value,
-                    index,
-                  }: {
-                    x: number
-                    y: number
-                    value: string
-                    index: number
-                  }) => {
-                    return (
-                      <text
-                        x={x}
-                        y={y}
-                        key={index}
-                        fontSize={isMobile ? 10 : 12}
-                        textAnchor="middle"
-                        dx={
-                          x < 100 ? (isMobile ? 15 : 22) : isMobile ? -10 : -15
-                        }
-                        dy={isMobile ? 6 : 8}
-                        fill={colorSanMapping[value]?.color ?? '#fff'}
-                      >
-                        {colorSanMapping[value]?.san ?? value}
-                      </text>
-                    )
-                  }) as ContentType
-                }
-              />
-              {moveMap?.map((entry, index) => (
-                <Cell
-                  key={`cell-${entry.move}${index}`}
-                  fill={colorSanMapping[entry.move]?.color ?? '#fff'}
-                  onMouseEnter={() => onMouseEnter(entry.move)}
-                  onMouseOutCapture={() => {
-                    setHoverArrow(null)
-                  }}
-                />
-              ))}
-            </Scatter>
+            {moveMap?.map((entry, index) => {
+              const opacity = entry.opacity ?? 1
+              const size = entry.size ?? (isMobile ? 8 : 10)
+              const baseColor = colorSanMapping[entry.move]?.color ?? '#fff'
+              const fillColor = baseColor.startsWith('#')
+                ? hexToRgba(baseColor, opacity)
+                : baseColor
+
+              return (
+                <Scatter
+                  key={`scatter-${entry.move}${index}`}
+                  name={`Move-${entry.move}`}
+                  data={[entry]}
+                  fill={fillColor}
+                  r={size}
+                >
+                  <Cell
+                    fill={fillColor}
+                    onMouseEnter={(event) =>
+                      onMouseEnter(entry.move, entry, event)
+                    }
+                    onMouseLeave={onMouseLeave}
+                    style={{ cursor: 'pointer' }}
+                  />
+                </Scatter>
+              )
+            })}
           </ScatterChart>
         </ResponsiveContainer>
+
+        {/* Comprehensive tooltip */}
+        {renderTooltip()}
       </div>
     </div>
   )

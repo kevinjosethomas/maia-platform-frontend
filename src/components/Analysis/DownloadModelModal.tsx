@@ -12,13 +12,6 @@ export const DownloadModelModal: React.FC<Props> = ({
   progress,
   download,
 }: Props) => {
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = 'unset'
-    }
-  }, [])
-
   return (
     <motion.div
       className="absolute left-0 top-0 z-20 flex h-screen w-screen flex-col items-center justify-center bg-black/90 px-4 md:px-0"

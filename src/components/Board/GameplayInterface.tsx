@@ -12,7 +12,7 @@ import Head from 'next/head'
 import { useUnload } from 'src/hooks/useUnload'
 import type { DrawShape } from 'chessground/draw'
 import { useCallback, useContext, useMemo, useState } from 'react'
-import { AuthContext, ThemeContext, WindowSizeContext } from 'src/contexts'
+import { AuthContext, WindowSizeContext } from 'src/contexts'
 import { PlayControllerContext } from 'src/contexts/PlayControllerContext/PlayControllerContext'
 
 interface Props {
@@ -44,7 +44,7 @@ export const GameplayInterface: React.FC<React.PropsWithChildren<Props>> = (
     setOrientation,
     goToPreviousNode,
   } = useContext(PlayControllerContext)
-  const { theme } = useContext(ThemeContext)
+
   const { user } = useContext(AuthContext)
   const { isMobile } = useContext(WindowSizeContext)
 
@@ -115,9 +115,7 @@ export const GameplayInterface: React.FC<React.PropsWithChildren<Props>> = (
   const Info = (
     <>
       <div className="flex w-full items-center justify-between text-secondary">
-        <p>
-          {theme == 'dark' ? '●' : '○'} {whitePlayer ?? 'Unknown'}
-        </p>
+        <p>● {whitePlayer ?? 'Unknown'}</p>
         <p>
           {game.termination?.winner === 'white' ? (
             <span className="text-engine-3">1</span>
@@ -129,9 +127,7 @@ export const GameplayInterface: React.FC<React.PropsWithChildren<Props>> = (
         </p>
       </div>
       <div className="flex w-full items-center justify-between text-secondary">
-        <p>
-          {theme == 'light' ? '●' : '○'} {blackPlayer ?? 'Unknown'}
-        </p>
+        <p>○ {blackPlayer ?? 'Unknown'}</p>
         <p>
           {game.termination?.winner === 'black' ? (
             <span className="text-engine-3">1</span>

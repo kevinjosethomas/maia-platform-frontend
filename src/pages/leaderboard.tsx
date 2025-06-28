@@ -63,7 +63,7 @@ const Leaderboard: React.FC = () => {
   }, [fetchLeaderboard])
 
   return (
-    <div className="flex h-full w-full flex-col items-start justify-center gap-8 px-[4%] py-[2%]">
+    <div className="mx-auto flex h-full w-[90%] flex-col items-start justify-center gap-8 py-[2%]">
       <Head>
         <title>Leaderboard – Maia Chess</title>
         <meta

@@ -42,6 +42,7 @@ import {
   BoardController,
   PromotionOverlay,
   CustomAnalysisModal,
+  PlayerInfo,
 } from 'src/components'
 import Head from 'next/head'
 import toast from 'react-hot-toast'
@@ -509,40 +510,6 @@ const Analysis: React.FC<Props> = ({
     return chess.turn() === 'w' ? 'white' : 'black'
   }, [controller.currentNode])
 
-  const Player = ({
-    name,
-    rating,
-    color,
-    termination,
-  }: {
-    name: string
-    color: string
-    rating?: number
-    termination?: string
-  }) => {
-    return (
-      <div className="flex h-10 w-full items-center justify-between bg-background-1 px-4">
-        <div className="flex items-center gap-1.5">
-          <div
-            className={`h-2.5 w-2.5 rounded-full ${color === 'white' ? 'bg-white' : 'border bg-black'}`}
-          />
-          <p>
-            {name ?? 'Unknown'} {rating ? `(${rating})` : null}
-          </p>
-        </div>
-        {termination === color ? (
-          <p className="text-engine-3">1</p>
-        ) : termination !== 'none' ? (
-          <p className="text-human-3">0</p>
-        ) : termination === undefined ? (
-          <></>
-        ) : (
-          <p>1/2</p>
-        )}
-      </div>
-    )
-  }
-
   const NestedGameInfo = () => (
     <div className="flex w-full flex-col">
       <div className="hidden md:block">
@@ -662,7 +629,7 @@ const Analysis: React.FC<Props> = ({
         </div>
         <div className="flex h-[85vh] w-[45vh] flex-col gap-2 2xl:w-[55vh]">
           <div className="flex w-full flex-col overflow-hidden rounded">
-            <Player
+            <PlayerInfo
               name={
                 controller.orientation === 'white'
                   ? analyzedGame.blackPlayer.name
@@ -696,7 +663,7 @@ const Analysis: React.FC<Props> = ({
                 />
               ) : null}
             </div>
-            <Player
+            <PlayerInfo
               name={
                 controller.orientation === 'white'
                   ? analyzedGame.whitePlayer.name
@@ -755,6 +722,7 @@ const Analysis: React.FC<Props> = ({
               makeMove={makeMove}
               data={controller.blunderMeter}
               colorSanMapping={controller.colorSanMapping}
+              moveEvaluation={controller.moveEvaluation}
             />
           </div>
         </div>

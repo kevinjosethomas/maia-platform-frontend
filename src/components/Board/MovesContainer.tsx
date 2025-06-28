@@ -12,6 +12,7 @@ interface AnalysisProps {
   highlightIndices?: number[]
   termination?: Termination
   type: 'analysis'
+  showAnnotations?: boolean
 }
 
 interface TuringProps {
@@ -19,6 +20,7 @@ interface TuringProps {
   highlightIndices?: number[]
   termination?: Termination
   type: 'turing'
+  showAnnotations?: boolean
 }
 
 interface PlayProps {
@@ -26,6 +28,7 @@ interface PlayProps {
   highlightIndices?: number[]
   termination?: Termination
   type: 'play'
+  showAnnotations?: boolean
 }
 
 type Props = AnalysisProps | TuringProps | PlayProps
@@ -103,36 +106,36 @@ function UnlikelyGoodMoveIcon() {
 }
 
 export const MovesContainer: React.FC<Props> = (props) => {
-  const { game, highlightIndices, termination, type } = props
+  const {
+    game,
+    highlightIndices,
+    termination,
+    type,
+    showAnnotations = true,
+  } = props
   const { isMobile } = useContext(WindowSizeContext)
 
-  const controller = useBaseTreeController(type)
-  const { currentNode, goToNode, gameTree } = controller
+  const baseController = useBaseTreeController(type)
 
   const mainLineNodes = useMemo(() => {
-    if (type === 'analysis') {
-      if (!game.tree) return []
-      return game.tree.getMainLine()
-    } else {
-      return gameTree.getMainLine()
-    }
-  }, [game, type, gameTree])
+    return baseController.gameTree.getMainLine() ?? game.tree.getMainLine()
+  }, [game, type, baseController.gameTree, baseController.currentNode])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!currentNode) return
+      if (!baseController.currentNode) return
 
       switch (event.key) {
         case 'ArrowRight':
           event.preventDefault()
-          if (currentNode.mainChild) {
-            goToNode(currentNode.mainChild)
+          if (baseController.currentNode.mainChild) {
+            baseController.goToNode(baseController.currentNode.mainChild)
           }
           break
         case 'ArrowLeft':
           event.preventDefault()
-          if (currentNode.parent) {
-            goToNode(currentNode.parent)
+          if (baseController.currentNode.parent) {
+            baseController.goToNode(baseController.currentNode.parent)
           }
           break
         default:
@@ -142,7 +145,7 @@ export const MovesContainer: React.FC<Props> = (props) => {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [currentNode, goToNode])
+  }, [baseController.currentNode, baseController.goToNode])
 
   const moves = useMemo(() => {
     const nodes = mainLineNodes.slice(1)
@@ -215,8 +218,6 @@ export const MovesContainer: React.FC<Props> = (props) => {
     return pairs
   }, [mainLineNodes, isMobile])
 
-  const showAnnotations = type === 'analysis'
-
   if (isMobile) {
     return (
       <div className="w-full overflow-x-auto px-2">
@@ -228,9 +229,11 @@ export const MovesContainer: React.FC<Props> = (props) => {
               </div>
               {pair.whiteMove && (
                 <div
-                  onClick={() => goToNode(pair.whiteMove as GameNode)}
+                  onClick={() =>
+                    baseController.goToNode(pair.whiteMove as GameNode)
+                  }
                   className={`flex min-w-fit cursor-pointer flex-row items-center rounded px-2 py-1 text-sm ${
-                    currentNode === pair.whiteMove
+                    baseController.currentNode === pair.whiteMove
                       ? 'bg-human-4/20'
                       : 'hover:bg-background-2'
                   } ${highlightSet.has(pairIndex * 2 + 1) ? 'bg-human-3/80' : ''}`}
@@ -244,9 +247,11 @@ export const MovesContainer: React.FC<Props> = (props) => {
               )}
               {pair.blackMove && (
                 <div
-                  onClick={() => goToNode(pair.blackMove as GameNode)}
+                  onClick={() =>
+                    baseController.goToNode(pair.blackMove as GameNode)
+                  }
                   className={`flex min-w-fit cursor-pointer flex-row items-center rounded px-2 py-1 text-sm ${
-                    currentNode === pair.blackMove
+                    baseController.currentNode === pair.blackMove
                       ? 'bg-human-4/20'
                       : 'hover:bg-background-2'
                   } ${highlightSet.has(pairIndex * 2 + 2) ? 'bg-human-3/80' : ''}`}
@@ -263,7 +268,9 @@ export const MovesContainer: React.FC<Props> = (props) => {
           {termination && (
             <div
               className="min-w-fit cursor-pointer border border-primary/10 bg-background-1/90 px-4 py-1 text-sm opacity-90"
-              onClick={() => goToNode(mainLineNodes[mainLineNodes.length - 1])}
+              onClick={() =>
+                baseController.goToNode(mainLineNodes[mainLineNodes.length - 1])
+              }
             >
               {termination.result}
               {', '}
@@ -287,10 +294,10 @@ export const MovesContainer: React.FC<Props> = (props) => {
             </span>
             <div
               onClick={() => {
-                if (whiteNode) goToNode(whiteNode)
+                if (whiteNode) baseController.goToNode(whiteNode)
               }}
               data-index={index * 2 + 1}
-              className={`col-span-2 flex h-7 flex-1 cursor-pointer flex-row items-center justify-between px-2 text-sm hover:bg-background-2 ${currentNode === whiteNode && 'bg-human-4/20'} ${highlightSet.has(index * 2 + 1) && 'bg-human-3/80'}`}
+              className={`col-span-2 flex h-7 flex-1 cursor-pointer flex-row items-center justify-between px-2 text-sm hover:bg-background-2 ${baseController.currentNode === whiteNode && 'bg-human-4/20'} ${highlightSet.has(index * 2 + 1) && 'bg-human-3/80'}`}
             >
               {whiteNode?.san ?? whiteNode?.move}
               {showAnnotations && whiteNode?.blunder && <BlunderIcon />}
@@ -302,16 +309,16 @@ export const MovesContainer: React.FC<Props> = (props) => {
               <FirstVariation
                 color="white"
                 node={whiteNode}
-                currentNode={currentNode}
-                goToNode={goToNode}
+                currentNode={baseController.currentNode}
+                goToNode={baseController.goToNode}
               />
             ) : null}
             <div
               onClick={() => {
-                if (blackNode) goToNode(blackNode)
+                if (blackNode) baseController.goToNode(blackNode)
               }}
               data-index={index * 2 + 2}
-              className={`col-span-2 flex h-7 flex-1 cursor-pointer flex-row items-center justify-between px-2 text-sm hover:bg-background-2 ${currentNode === blackNode && 'bg-human-4/20'} ${highlightSet.has(index * 2 + 2) && 'bg-human-3/80'}`}
+              className={`col-span-2 flex h-7 flex-1 cursor-pointer flex-row items-center justify-between px-2 text-sm hover:bg-background-2 ${baseController.currentNode === blackNode && 'bg-human-4/20'} ${highlightSet.has(index * 2 + 2) && 'bg-human-3/80'}`}
             >
               {blackNode?.san ?? blackNode?.move}
               {showAnnotations && blackNode?.blunder && <BlunderIcon />}
@@ -323,8 +330,8 @@ export const MovesContainer: React.FC<Props> = (props) => {
               <FirstVariation
                 color="black"
                 node={blackNode}
-                currentNode={currentNode}
-                goToNode={goToNode}
+                currentNode={baseController.currentNode}
+                goToNode={baseController.goToNode}
               />
             ) : null}
           </>
@@ -333,7 +340,9 @@ export const MovesContainer: React.FC<Props> = (props) => {
       {termination && !isMobile && (
         <div
           className="col-span-5 cursor-pointer rounded-sm border border-primary/10 bg-background-1/90 p-5 text-center opacity-90"
-          onClick={() => goToNode(mainLineNodes[mainLineNodes.length - 1])}
+          onClick={() =>
+            baseController.goToNode(mainLineNodes[mainLineNodes.length - 1])
+          }
         >
           {termination.result}
           {', '}

@@ -6,7 +6,6 @@ import { useRouter } from 'next/router'
 import { useCallback, useContext, useEffect, useState } from 'react'
 
 import { PlayType } from 'src/types'
-import { ThemeButton } from 'src/components'
 import { AuthContext, ModalContext, WindowSizeContext } from 'src/contexts'
 import { MenuIcon, UserIcon, DiscordIcon } from 'src/components/Icons/icons'
 
@@ -187,7 +186,6 @@ export const Header: React.FC = () => {
         </div>
       </div>
       <div className="hidden flex-row items-center gap-3 md:flex">
-        <ThemeButton />
         <a
           target="_blank"
           rel="noreferrer"
@@ -295,7 +293,6 @@ export const Header: React.FC = () => {
             </a>
           </div>
           <div className="flex w-full flex-row items-center gap-3 px-4">
-            <ThemeButton />
             <a
               target="_blank"
               rel="noreferrer"

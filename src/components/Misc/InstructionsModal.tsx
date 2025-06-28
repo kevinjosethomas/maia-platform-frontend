@@ -44,6 +44,65 @@ interface Props {
   instructionsType: InstructionsType
 }
 
+const getFeatureIcon = (instructionsType: InstructionsType): string => {
+  switch (instructionsType) {
+    case 'againstMaia':
+      return 'smart_toy'
+    case 'handAndBrain':
+      return 'diversity_3'
+    case 'analysis':
+      return 'analytics'
+    case 'train':
+      return 'fitness_center'
+    case 'turing':
+      return 'psychology'
+    default:
+      return 'help'
+  }
+}
+
+const getKeyFeatures = (instructionsType: InstructionsType): string[] => {
+  switch (instructionsType) {
+    case 'againstMaia':
+      return [
+        'Choose Maia opponent strength (1100-1900)',
+        'Customizable time controls',
+        'Start from custom positions',
+        'Get rated based on your performance',
+      ]
+    case 'handAndBrain':
+      return [
+        'Play as either Hand or Brain',
+        'Team up with Maia as your partner',
+        'Face off against Maia opponent teams',
+        'Separate ratings for Hand and Brain play',
+      ]
+    case 'analysis':
+      return [
+        'Analyze your Lichess games',
+        'Compare Maia vs Stockfish analysis',
+        'Visualize moves on the movemap',
+        'Continue positions against Maia',
+      ]
+    case 'train':
+      return [
+        'Solve Maia-inspired tactics puzzles',
+        'Unlock moveaps after solving',
+        'Track your tactics rating',
+        'Learn human-like move patterns',
+      ]
+    case 'turing':
+      return [
+        'Distinguish human from bot play',
+        'Browse complete games',
+        'Submit reasoning for your guesses',
+        'Compete on the leaderboard',
+      ]
+    default:
+      return []
+  }
+}
+
 export const InstructionsModal: React.FC<Props> = ({
   instructionsType,
 }: Props) => {
@@ -58,30 +117,77 @@ export const InstructionsModal: React.FC<Props> = ({
     setOpenedModals({ ...openedModals, [instructionsType]: true })
   }
 
+  const features = getKeyFeatures(instructionsType)
+
   return (
     <AnimatePresence>
       <ModalContainer dismiss={dismiss} className="z-50">
-        <div className="relative flex flex-col gap-4">
+        <div className="relative flex h-[550px] w-[600px] max-w-[90vw] flex-col overflow-hidden rounded-lg bg-background-1">
           <button
             title="Close"
             onClick={dismiss}
-            className="absolute -right-4 -top-2 cursor-pointer border-none bg-none opacity-50 outline-none transition duration-300 hover:opacity-100"
+            className="absolute right-4 top-4 z-10 text-secondary transition-colors hover:text-primary"
           >
-            {CloseIcon}
+            <span className="material-symbols-outlined">close</span>
           </button>
-          <h2 className="text-center text-2xl font-bold">
-            {titles[instructionsType]}
-          </h2>
-          <div className="max-w-[600px]">
-            <Markdown>{content[instructionsType]}</Markdown>
-            <div className="flex items-center justify-end">
-              <button
-                onClick={dismiss}
-                className="flex items-center justify-center rounded-sm bg-human-3 px-4 py-2 transition duration-200 hover:bg-human-4"
-              >
-                Continue
-              </button>
+
+          {/* Header */}
+          <div className="border-b border-white/10 p-4">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-2xl text-human-4">
+                {getFeatureIcon(instructionsType)}
+              </span>
+              <div>
+                <h2 className="text-xl font-bold text-primary">
+                  {titles[instructionsType]}
+                </h2>
+                <p className="text-xs text-secondary">
+                  Learn how to use this feature effectively
+                </p>
+              </div>
             </div>
+          </div>
+
+          {/* Key Features */}
+          <div className="border-b border-white/10 p-4">
+            <h3 className="mb-2 text-sm font-medium text-primary">
+              Key Features
+            </h3>
+            <div className="grid grid-cols-1 gap-2">
+              {features.map((feature, index) => (
+                <div key={index} className="flex items-center gap-2 text-sm">
+                  <span
+                    className="material-symbols-outlined text-human-4"
+                    style={{ fontSize: '16px' }}
+                  >
+                    check_circle
+                  </span>
+                  <span className="text-primary">{feature}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <h3 className="mb-2 text-sm font-medium text-primary">
+              How it Works
+            </h3>
+            <div className="prose prose-sm max-w-none">
+              <div className="text-sm leading-relaxed text-secondary">
+                <Markdown>{content[instructionsType]}</Markdown>
+              </div>
+            </div>
+          </div>
+
+          {/* Action */}
+          <div className="border-t border-white/10 p-4">
+            <button
+              onClick={dismiss}
+              className="w-full rounded bg-human-4 py-2 text-sm font-medium text-white transition-colors hover:bg-human-4/80"
+            >
+              Get Started
+            </button>
           </div>
         </div>
       </ModalContainer>

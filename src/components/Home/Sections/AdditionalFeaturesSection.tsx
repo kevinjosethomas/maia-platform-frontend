@@ -82,7 +82,7 @@ const FeatureCard = ({
         <p className="mb-5 flex-grow text-primary/80">{description}</p>
       </div>
       {action.type === 'link' ? (
-        <motion.div>
+        <motion.div className="mt-auto">
           <Link
             href={action.href}
             className="mt-auto inline-flex w-full items-center justify-center bg-human-4/80 px-5 py-3 font-medium transition duration-200 hover:bg-human-4"
