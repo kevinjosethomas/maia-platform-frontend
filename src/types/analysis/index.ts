@@ -1,7 +1,14 @@
 import { Game } from '../base'
 import { AvailableMoves } from '../training'
 
-type EvaluationType = 'tournament' | 'pgn' | 'play' | 'hand' | 'brain'
+type EvaluationType =
+  | 'tournament'
+  | 'pgn'
+  | 'play'
+  | 'hand'
+  | 'brain'
+  | 'custom-pgn'
+  | 'custom-fen'
 
 type StockfishEvaluations<T extends EvaluationType> = T extends 'tournament'
   ? MoveMap[]
@@ -20,19 +27,31 @@ export interface AnalysisTournamentGame {
 
 export interface AnalysisWebGame {
   id: string
-  type: 'tournament' | 'pgn' | 'play' | 'hand' | 'brain'
+  type:
+    | 'tournament'
+    | 'pgn'
+    | 'play'
+    | 'hand'
+    | 'brain'
+    | 'custom-pgn'
+    | 'custom-fen'
   label: string
   result: string
   pgn?: string
 }
 
 export interface AnalyzedGame extends Game {
-  maiaEvaluations: { [model: string]: MoveMap[] }
+  maiaEvaluations: { [rating: string]: MaiaEvaluation }[]
   stockfishEvaluations: StockfishEvaluations<EvaluationType>
-  positionEvaluations: { [model: string]: PositionEvaluation[] }
   availableMoves: AvailableMoves[]
   type: EvaluationType
   pgn?: string
+}
+
+export interface CustomAnalysisInput {
+  type: 'custom-pgn' | 'custom-fen'
+  data: string // PGN string or FEN string
+  name?: string
 }
 
 export interface Termination {
@@ -51,6 +70,11 @@ export interface PositionEvaluation {
   performance: number
 }
 
+export interface MaiaEvaluation {
+  policy: { [key: string]: number }
+  value: number
+}
+
 export interface StockfishEvaluation {
   sent: boolean
   depth: number
@@ -58,4 +82,40 @@ export interface StockfishEvaluation {
   model_optimal_cp: number
   cp_vec: { [key: string]: number }
   cp_relative_vec: { [key: string]: number }
+  winrate_vec?: { [key: string]: number }
+  winrate_loss_vec?: { [key: string]: number }
 }
+
+export interface ColorSanMapping {
+  [move: string]: {
+    san: string
+    color: string
+  }
+}
+
+export interface BlunderInfo {
+  move: string
+  probability: number
+}
+
+export interface BlunderMeterResult {
+  blunderMoves: {
+    probability: number
+    moves: BlunderInfo[]
+  }
+  okMoves: {
+    probability: number
+    moves: BlunderInfo[]
+  }
+  goodMoves: {
+    probability: number
+    moves: BlunderInfo[]
+  }
+}
+
+export type MaiaStatus =
+  | 'loading'
+  | 'no-cache'
+  | 'downloading'
+  | 'ready'
+  | 'error'

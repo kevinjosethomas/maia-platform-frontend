@@ -18,7 +18,7 @@ interface Props {
 export const UserProfile = ({ wide, stats }: Props) => {
   return (
     <div
-      className={`grid h-full w-full grid-cols-1 gap-6 ${wide ? 'md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4' : 'lg:grid-cols-2'}`}
+      className={`grid h-full w-full grid-cols-1 gap-3 md:gap-6 ${wide ? 'md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4' : 'lg:grid-cols-2 2xl:grid-cols-3'}`}
     >
       <ProfileColumn
         icon={<RegularPlayIcon />}

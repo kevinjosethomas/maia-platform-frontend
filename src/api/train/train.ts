@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { MoveMap } from 'src/types'
+import { Chess } from 'chess.ts'
+import { MoveMap, GameTree } from 'src/types'
 import { AvailableMoves, TrainingGame } from 'src/types/training'
 import { buildUrl } from '../utils'
 
@@ -46,9 +47,29 @@ export const getTrainingGame = async () => {
       lastMove,
       movePlayed: move,
       san,
+      uci: lastMove ? lastMove.join('') : undefined,
       check,
     }
   })
+
+  // Build game tree from moves
+  if (moves.length === 0) {
+    throw new Error('Moves array is empty. Cannot initialize GameTree.')
+  }
+  const gameTree = new GameTree(moves[0].board)
+  let currentNode = gameTree.getRoot()
+
+  for (let i = 1; i < moves.length; i++) {
+    const move = moves[i]
+    if (move.uci && move.san) {
+      currentNode = gameTree.addMainMove(
+        currentNode,
+        move.board,
+        move.uci,
+        move.san,
+      )
+    }
+  }
 
   const moveMap = data['target_move_map']
 
@@ -84,6 +105,7 @@ export const getTrainingGame = async () => {
     whitePlayer,
     blackPlayer,
     moves,
+    tree: gameTree,
     maiaEvaluation,
     stockfishEvaluation,
     gameType,

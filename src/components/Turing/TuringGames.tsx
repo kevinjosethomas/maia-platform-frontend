@@ -3,7 +3,9 @@ import { useContext } from 'react'
 import { TuringControllerContext } from 'src/contexts'
 
 export const TuringGames: React.FC = () => {
-  const { gameIds, setCurrentId, games } = useContext(TuringControllerContext)
+  const { gameIds, setCurrentGameId, games } = useContext(
+    TuringControllerContext,
+  )
   return (
     <div className="flex flex-row flex-wrap items-start justify-start gap-1 overflow-y-auto">
       {gameIds.map((id) => {
@@ -11,7 +13,7 @@ export const TuringGames: React.FC = () => {
         return (
           <button
             key={id}
-            onClick={() => setCurrentId(id)}
+            onClick={() => setCurrentGameId(id)}
             className={`${!game.result ? 'bg-button-secondary' : game.result?.correct ? 'bg-engine-4' : 'bg-human-4'} h-10 w-10 cursor-pointer rounded-sm`}
           >
             {game.result?.ratingDiff ? (

@@ -1,4 +1,5 @@
-import { Color, TuringGame, TuringSubmissionResult } from 'src/types'
+import { Chess } from 'chess.ts'
+import { Color, TuringGame, TuringSubmissionResult, GameTree } from 'src/types'
 import { buildUrl } from 'src/api'
 
 export const getTuringGame = async () => {
@@ -30,16 +31,37 @@ export const getTuringGame = async () => {
         board: fen,
         lastMove,
         san,
+        uci: lastMove ? lastMove.join('') : undefined,
         check,
       }
     },
   )
+
+  // Build game tree from moves
+  if (moves.length === 0) {
+    throw new Error('No moves available to initialize the game tree')
+  }
+  const gameTree = new GameTree(moves[0].board)
+  let currentNode = gameTree.getRoot()
+
+  for (let i = 1; i < moves.length; i++) {
+    const move = moves[i]
+    if (move.uci && move.san) {
+      currentNode = gameTree.addMainMove(
+        currentNode,
+        move.board,
+        move.uci,
+        move.san,
+      )
+    }
+  }
 
   return {
     termination,
     id,
     gameStates,
     moves,
+    tree: gameTree,
   } as TuringGame
 }
 

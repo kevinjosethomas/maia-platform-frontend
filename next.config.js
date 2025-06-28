@@ -6,9 +6,6 @@ const withTM = require('next-transpile-modules')(['@react-chess/chessground'])
 module.exports = withTM({
   reactStrictMode: false,
   output: 'standalone',
-  experimental: {
-    esmExternals: 'loose',
-  },
   async rewrites() {
     return [
       {

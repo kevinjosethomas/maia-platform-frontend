@@ -4,6 +4,10 @@ module.exports = {
   darkMode: 'class',
   theme: {
     extend: {
+      screens: {
+        '3xl': '1920px',
+        '4xl': '2560px',
+      },
       colors: {
         backdrop: 'rgb(var(--color-backdrop))',
         primary: 'rgb(var(--color-text-primary))',

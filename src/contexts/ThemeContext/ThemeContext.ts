@@ -8,8 +8,8 @@ interface IThemeContext {
 }
 
 export const ThemeContext = React.createContext<IThemeContext>({
-  theme: 'light',
+  theme: 'dark',
   toggleTheme: () => {
-    throw new Error('poorly provided ThemeContext, missing toggle Theme')
+    // No-op since we only support dark mode
   },
 })

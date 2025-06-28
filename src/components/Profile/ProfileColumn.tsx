@@ -1,5 +1,7 @@
+import React from 'react'
+
 interface Props {
-  icon: JSX.Element
+  icon: React.JSX.Element
   name: string
   data: {
     rating: number
@@ -19,34 +21,34 @@ export const ProfileColumn: React.FC<Props> = ({ icon, name, data }: Props) => {
 
   return (
     <div className="flex w-full flex-col overflow-hidden rounded border border-white border-opacity-10">
-      <div className="flex flex-row items-center justify-start gap-4 bg-background-1 px-6 py-4 md:px-6">
-        <div className="h-[28px] w-[28px] md:h-[28px] md:w-[28px]">{icon}</div>
-        <p className="text-2xl font-bold md:text-3xl">{name}</p>
+      <div className="flex flex-row items-center justify-start gap-3 bg-background-1 px-4 py-3">
+        <div className="h-[20px] w-[20px] md:h-[24px] md:w-[24px]">{icon}</div>
+        <p className="text-xl font-bold md:text-2xl">{name}</p>
       </div>
-      <div className="flex flex-col gap-6 bg-background-1/40 px-6 py-5 md:px-8">
+      <div className="flex flex-col gap-4 bg-background-1/40 p-4">
         <div className="flex items-center justify-between">
           <div className="flex flex-col items-center justify-center gap-1 text-human-1">
             <p className="text-sm xl:text-base">Rating</p>
-            <b className="text-3xl xl:text-4xl">{data.rating}</b>
+            <b className="text-xl xl:text-2xl">{data.rating}</b>
           </div>
           <div className="flex flex-col items-center justify-center gap-1">
             <p className="text-sm xl:text-base">Highest</p>
-            <b className="text-3xl xl:text-4xl">{data.highest}</b>
+            <b className="text-xl xl:text-2xl">{data.highest}</b>
           </div>
           <div className="flex flex-col items-center justify-center gap-1">
             <p className="text-sm xl:text-base">Games</p>
-            <b className="text-3xl xl:text-4xl">{data.games}</b>
+            <b className="text-xl xl:text-2xl">{data.games}</b>
           </div>
-          <div className="flex flex-col items-center justify-center gap-1">
+          {/* <div className="flex flex-col items-center justify-center gap-1">
             <p className="text-sm xl:text-base">Hours</p>
-            <b className="text-3xl xl:text-4xl">{data.hours}</b>
-          </div>
+            <b className="text-xl xl:text-2xl">{data.hours}</b>
+          </div> */}
         </div>
         <div className="flex flex-col items-center gap-2">
           <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-1">
-              <div className="h-4 w-4 border border-black bg-green-500/70" />
-              <p className="text-xs xl:text-sm">
+              <div className="h-3 w-3 border border-black bg-green-500/70" />
+              <p className="text-xs">
                 Wins: {wins}{' '}
                 <span className="text-secondary">
                   ({Math.round((wins * 100) / data.games) || 0}%)
@@ -55,8 +57,8 @@ export const ProfileColumn: React.FC<Props> = ({ icon, name, data }: Props) => {
             </div>
             {draws > 0 ? (
               <div className="flex items-center gap-1">
-                <div className="h-4 w-4 border border-black bg-yellow-500/70" />
-                <p className="text-xs xl:text-sm">
+                <div className="h-3 w-3 border border-black bg-yellow-500/70" />
+                <p className="text-xs">
                   Draws: {draws}{' '}
                   <span className="text-secondary">
                     ({Math.round((draws * 100) / data.games) || 0}%)
@@ -67,8 +69,8 @@ export const ProfileColumn: React.FC<Props> = ({ icon, name, data }: Props) => {
               <></>
             )}
             <div className="flex items-center gap-1">
-              <div className="h-4 w-4 border border-black bg-red-500/70" />
-              <p className="text-xs xl:text-sm">
+              <div className="h-3 w-3 border border-black bg-red-500/70" />
+              <p className="text-xs">
                 Losses: {losses}{' '}
                 <span className="text-secondary">
                   ({Math.round((losses * 100) / data.games) || 0}%)
@@ -76,17 +78,17 @@ export const ProfileColumn: React.FC<Props> = ({ icon, name, data }: Props) => {
               </p>
             </div>
           </div>
-          <div className="flex h-10 w-full border-2 border-black">
+          <div className="flex h-6 w-full border border-black">
             {wins > 0 && (
               <div
-                className="h-full border-r-2 border-black bg-green-500/70"
+                className="h-full border-r border-black bg-green-500/70"
                 style={{ width: `${(wins / data.games) * 100}%` }}
               />
             )}
 
             {draws > 0 && (
               <div
-                className="h-full border-r-2 border-black bg-yellow-500/70"
+                className="h-full border-r border-black bg-yellow-500/70"
                 style={{ width: `${(draws / data.games) * 100}%` }}
               />
             )}

@@ -1,41 +1,117 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useContext } from 'react'
-import type { DrawShape } from 'chessground/draw'
+import { Chess } from 'chess.ts'
+import { useChessSound } from 'src/hooks'
+import { defaults } from 'chessground/state'
+import type { Key } from 'chessground/types'
 import Chessground from '@react-chess/chessground'
-
-import { BaseGame, Check } from 'src/types'
-import { GameControllerContext } from 'src/contexts'
+import { BaseGame, Check, GameNode, Color } from 'src/types'
+import type { DrawBrushes, DrawShape } from 'chessground/draw'
+import { useCallback, useMemo, Dispatch, SetStateAction } from 'react'
 
 interface Props {
-  game: BaseGame
-  moves?: Map<string, string[]>
-  setCurrentMove?: (move: [string, string] | null) => void
-  setCurrentSquare?: (key: string | null) => void
-  move?: {
-    fen: string
-    move: [string, string]
-    check?: Check
-  }
+  game?: BaseGame
+  currentNode: GameNode
+  orientation?: Color
+  availableMoves?: Map<string, string[]>
+  onSelectSquare?: (square: Key) => void
+  onPlayerMakeMove?: (move: [string, string]) => void
+  setCurrentSquare?: Dispatch<SetStateAction<Key | null>>
   shapes?: DrawShape[]
+  brushes?: DrawBrushes
+  goToNode?: (node: GameNode) => void
+  gameTree?: any
 }
 
 export const GameBoard: React.FC<Props> = ({
   game,
-  moves,
-  move,
-  setCurrentMove,
-  setCurrentSquare,
   shapes,
+  brushes,
+  goToNode,
+  gameTree,
+  currentNode,
+  orientation = 'white',
+  availableMoves,
+  onPlayerMakeMove,
+  setCurrentSquare,
+  onSelectSquare,
 }: Props) => {
-  const { currentIndex, orientation } = useContext(GameControllerContext)
+  const { playSound } = useChessSound()
 
   const after = useCallback(
     (from: string, to: string) => {
-      if (setCurrentMove) setCurrentMove([from, to])
+      if (onPlayerMakeMove) onPlayerMakeMove([from, to])
       if (setCurrentSquare) setCurrentSquare(null)
+
+      const currentFen = currentNode.fen
+      if (currentFen) {
+        const chess = new Chess(currentFen)
+        const pieceAtDestination = chess.get(to)
+        const isCapture = !!pieceAtDestination
+
+        // Handle analysis board move creation (if gameTree and goToNode are provided)
+        if (
+          gameTree &&
+          goToNode &&
+          currentNode &&
+          game &&
+          'tree' in game &&
+          game.tree
+        ) {
+          const moveAttempt = chess.move({ from: from, to: to })
+          if (moveAttempt) {
+            playSound(isCapture)
+
+            const newFen = chess.fen()
+            const moveString = from + to
+            const san = moveAttempt.san
+
+            if (currentNode.mainChild?.move === moveString) {
+              goToNode(currentNode.mainChild)
+            } else {
+              const newVariation = game.tree.addVariation(
+                currentNode,
+                newFen,
+                moveString,
+                san,
+              )
+              goToNode(newVariation)
+            }
+          }
+        } else {
+          playSound(isCapture)
+        }
+      } else {
+        playSound(false)
+      }
     },
-    [setCurrentMove, setCurrentSquare],
+    [
+      game,
+      gameTree,
+      goToNode,
+      playSound,
+      currentNode,
+      onPlayerMakeMove,
+      setCurrentSquare,
+    ],
   )
+
+  const boardConfig = useMemo(() => {
+    const fen = currentNode.fen
+
+    const lastMove = currentNode.move
+      ? ([currentNode.move.slice(0, 2), currentNode.move.slice(2, 4)] as [
+          Key,
+          Key,
+        ])
+      : []
+
+    return {
+      fen,
+      lastMove,
+      check: currentNode.check,
+      orientation: orientation as 'white' | 'black',
+    }
+  }, [currentNode, game, orientation])
 
   return (
     <Chessground
@@ -43,26 +119,25 @@ export const GameBoard: React.FC<Props> = ({
       config={{
         movable: {
           free: false,
-          dests: moves as any,
+          dests: availableMoves as any,
           events: {
             after,
           },
         },
         events: {
           select: (key) => {
-            setCurrentMove && setCurrentMove(null)
+            onSelectSquare && onSelectSquare(key)
             setCurrentSquare && setCurrentSquare(key)
           },
         },
         drawable: {
           autoShapes: shapes || [],
+          brushes: { ...defaults().drawable.brushes, ...brushes },
         },
-        fen: move ? move.fen : game.moves[currentIndex]?.board,
-        lastMove: move
-          ? move.move
-          : [...((game.moves[currentIndex]?.lastMove ?? []) as any)],
-        check: move ? move.check : game.moves[currentIndex]?.check,
-        orientation,
+        fen: boardConfig.fen,
+        lastMove: boardConfig.lastMove as Key[],
+        check: boardConfig.check,
+        orientation: boardConfig.orientation,
       }}
     />
   )

@@ -93,7 +93,7 @@ export const LeaderboardEntry = ({
     if (hover) {
       timer = setTimeout(() => {
         fetchStats()
-      }, 300)
+      }, 500)
     } else {
       setPopup(false)
     }
@@ -113,7 +113,7 @@ export const LeaderboardEntry = ({
 
   return (
     <div
-      className={`relative flex w-full items-center justify-between px-6 py-2 ${index % 2 === 0 ? 'bg-background-1/90' : 'bg-background-1/50'}`}
+      className={`relative flex w-full items-center justify-between px-6 py-2 ${index % 2 === 0 ? 'bg-opacity-0' : 'bg-white bg-opacity-[0.015]'}`}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >

@@ -10,7 +10,7 @@ export const Markdown: React.FC<Props> = ({ children: markdown }: Props) => (
     components={{
       h1: ({ children }) => (
         <h1
-          id={children.toString().toLowerCase()}
+          id={children?.toString().toLowerCase()}
           className="text-4xl font-bold"
         >
           {children}
@@ -18,7 +18,7 @@ export const Markdown: React.FC<Props> = ({ children: markdown }: Props) => (
       ),
       h2: ({ children }) => (
         <h2
-          id={children.toString().toLowerCase()}
+          id={children?.toString().toLowerCase()}
           className="text-3xl font-bold"
         >
           {children}
@@ -26,7 +26,7 @@ export const Markdown: React.FC<Props> = ({ children: markdown }: Props) => (
       ),
       h3: ({ children }) => (
         <h3
-          id={children.toString().toLowerCase()}
+          id={children?.toString().toLowerCase()}
           className="text-2xl font-semibold"
         >
           {children}
@@ -34,7 +34,7 @@ export const Markdown: React.FC<Props> = ({ children: markdown }: Props) => (
       ),
       h4: ({ children }) => (
         <h4
-          id={children.toString().toLowerCase()}
+          id={children?.toString().toLowerCase()}
           className="text-xl font-semibold"
         >
           {children}
@@ -42,7 +42,7 @@ export const Markdown: React.FC<Props> = ({ children: markdown }: Props) => (
       ),
       h5: ({ children }) => (
         <h5
-          id={children.toString().toLowerCase()}
+          id={children?.toString().toLowerCase()}
           className="text-lg font-medium"
         >
           {children}
@@ -50,7 +50,7 @@ export const Markdown: React.FC<Props> = ({ children: markdown }: Props) => (
       ),
       h6: ({ children }) => (
         <h6
-          id={children.toString().toLowerCase()}
+          id={children?.toString().toLowerCase()}
           className="text-base font-medium"
         >
           {children}

@@ -14,14 +14,19 @@ const states = [
 
 export const Loading: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [renderKey, setRenderKey] = useState(0)
+
   const currentState = useMemo(
     () => states[currentIndex % states.length],
     [currentIndex],
   )
+
   useEffect(() => {
     const increment = async () => {
       await new Promise((resolve) => setTimeout(resolve, 500))
       setCurrentIndex(currentIndex + 1)
+
+      setRenderKey((prev) => prev + 1)
     }
 
     increment()
@@ -31,7 +36,18 @@ export const Loading: React.FC = () => {
     <div className="flex h-screen w-screen items-center justify-center bg-backdrop pb-20">
       <div className="flex flex-col items-center gap-4">
         <div className="h-[50vw] w-[50vw] opacity-50 md:h-[30vh] md:w-[30vh]">
-          <Chessground contained config={{ fen: currentState }} />
+          <div className="h-full w-full">
+            <Chessground
+              key={renderKey}
+              contained
+              config={{
+                fen: currentState,
+                animation: {
+                  duration: 0,
+                },
+              }}
+            />
+          </div>
         </div>
         <h2 className="text-2xl font-semibold">Loading...</h2>
       </div>

@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from 'react'
 
 import { Color } from 'src/types'
 import { AuthContext, ThemeContext } from 'src/contexts'
-import { PlayControllerContext } from 'src/contexts/PlayControllerContext'
+import { PlayControllerContext } from 'src/contexts/PlayControllerContext/PlayControllerContext'
 
 interface Props {
   player: Color

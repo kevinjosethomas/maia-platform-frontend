@@ -1,4 +1,6 @@
 import Image from 'next/image'
+import { Chess } from 'chess.ts'
+import toast from 'react-hot-toast'
 import { useRouter } from 'next/router'
 import { AnimatePresence } from 'framer-motion'
 import { useCallback, useContext, useState } from 'react'
@@ -40,12 +42,18 @@ function OptionSelect<T>({
   onChange,
 }: OptionSelectProps<T>) {
   return (
-    <div className="flex flex-row items-center overflow-hidden rounded-sm">
+    <div className="flex overflow-hidden rounded-lg">
       {options.map((option, index) => {
         return (
           <button
             key={index}
-            className={`cursor-pointer bg-background-2 px-4 py-1 text-primary ${option === selected ? 'bg-human-4' : 'hover:bg-human-4/80'} transition duration-200`}
+            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+              option === selected
+                ? 'bg-human-4 text-white'
+                : 'bg-background-2 text-primary hover:bg-background-3'
+            } ${index === 0 ? 'rounded-l-lg' : ''} ${
+              index === options.length - 1 ? 'rounded-r-lg' : ''
+            }`}
             onClick={() => onChange(option)}
           >
             {labels[index]}
@@ -97,9 +105,14 @@ export const PlaySetupModal: React.FC<Props> = (props: Props) => {
 
   const start = useCallback(
     (color: Color | undefined) => {
-      setPlaySetupModalProps(undefined)
-
       const player = color ?? ['white', 'black'][Math.floor(Math.random() * 2)]
+
+      if (fen && !new Chess().validateFen(fen).valid) {
+        toast.error('Invalid Starting FEN provided')
+        return
+      }
+
+      setPlaySetupModalProps(undefined)
 
       if (props.playType == 'againstMaia') {
         push({
@@ -147,126 +160,195 @@ export const PlaySetupModal: React.FC<Props> = (props: Props) => {
   return (
     <AnimatePresence>
       <ModalContainer dismiss={() => setPlaySetupModalProps(undefined)}>
-        <div className="relative flex flex-col justify-center gap-6 text-left">
+        <div className="relative flex h-[600px] w-[500px] max-w-[90vw] flex-col overflow-hidden rounded-lg bg-background-1">
           <button
-            className="absolute -right-4 -top-2 cursor-pointer border-none bg-none opacity-50 transition duration-200 *:text-primary hover:opacity-100"
+            className="absolute right-4 top-4 z-10 text-secondary transition-colors hover:text-primary"
             title="Close"
             onClick={() => setPlaySetupModalProps(undefined)}
           >
-            {CloseIcon}
+            <span className="material-symbols-outlined">close</span>
           </button>
-          <h2 className="text-center text-2xl font-bold">
-            {props.playType == 'againstMaia'
-              ? 'Play Maia'
-              : 'Play Hand and Brain'}
-          </h2>
-          <div className="flex flex-col items-start gap-4">
-            {props.playType == 'handAndBrain' ? (
-              <>
-                <div className="flex items-center justify-center gap-2">
-                  Play as:{' '}
+
+          {/* Header */}
+          <div className="border-b border-white/10 p-4">
+            <h2 className="text-xl font-bold text-primary">
+              {props.playType == 'againstMaia'
+                ? 'Play Against Maia'
+                : 'Play Hand and Brain'}
+            </h2>
+            <p className="text-xs text-secondary">
+              {props.playType == 'againstMaia'
+                ? 'Configure your game settings and choose your side'
+                : 'Team up with Maia in Hand and Brain chess'}
+            </p>
+          </div>
+
+          {/* Settings Section */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="space-y-4">
+              {props.playType == 'handAndBrain' ? (
+                <>
+                  <div>
+                    <label
+                      htmlFor="play-as-select"
+                      className="mb-1 block text-sm font-medium text-primary"
+                    >
+                      Play as:
+                    </label>
+                    <div id="play-as-select">
+                      <OptionSelect
+                        options={[false, true]}
+                        labels={['Hand', 'Brain']}
+                        selected={isBrain}
+                        onChange={setIsBrain}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="partner-select"
+                      className="mb-1 block text-sm font-medium text-primary"
+                    >
+                      Partner:
+                    </label>
+                    <select
+                      id="partner-select"
+                      value={maiaPartnerVersion}
+                      className="w-full rounded bg-background-2 px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-human-4"
+                      onChange={(e) => setMaiaPartnerVersion(e.target.value)}
+                    >
+                      {maiaOptions.map((maia) => (
+                        <option key={`partner_${maia}`} value={maia}>
+                          {maia.replace('maia_kdd_', 'Maia ')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              ) : null}
+
+              <div>
+                <label
+                  htmlFor="opponent-select"
+                  className="mb-1 block text-sm font-medium text-primary"
+                >
+                  Opponent:
+                </label>
+                <select
+                  id="opponent-select"
+                  value={maiaVersion}
+                  className="w-full rounded bg-background-2 px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-human-4"
+                  onChange={(e) => setMaiaVersion(e.target.value)}
+                >
+                  {maiaOptions.map((maia) => (
+                    <option key={`opponent_${maia}`} value={maia}>
+                      {maia.replace('maia_kdd_', 'Maia ')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="time-control-select"
+                  className="mb-1 block text-sm font-medium text-primary"
+                >
+                  Time control:
+                </label>
+                <div id="time-control-select">
                   <OptionSelect
-                    options={[false, true]}
-                    labels={['Hand', 'Brain']}
-                    selected={isBrain}
-                    onChange={setIsBrain}
+                    options={TimeControlOptions}
+                    labels={TimeControlOptionNames}
+                    selected={timeControl}
+                    onChange={setTimeControl}
                   />
                 </div>
-                <div className="flex items-center justify-start gap-2">
-                  Partner:{' '}
-                  <select
-                    value={maiaPartnerVersion}
-                    className="overflow-hidden rounded-sm bg-background-2 px-2 py-1 focus:outline-none"
-                    onChange={(e) => setMaiaPartnerVersion(e.target.value)}
-                  >
-                    {maiaOptions.map((maia) => (
-                      <option key={`partner_${maia}`} value={maia}>
-                        {maia.replace('maia_kdd_', 'Maia ')}
-                      </option>
-                    ))}
-                  </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="maia-time-select"
+                  className="mb-1 block text-sm font-medium text-primary"
+                >
+                  Maia thinking time:
+                </label>
+                <div id="maia-time-select">
+                  <OptionSelect
+                    options={[false, true]}
+                    labels={['Instant', 'Human-like']}
+                    selected={simulateMaiaTime}
+                    onChange={setSimulateMaiaTime}
+                  />
                 </div>
-              </>
-            ) : null}
-            <div className="flex items-center justify-start gap-2">
-              Opponent:
-              <select
-                value={maiaVersion}
-                className="overflow-hidden rounded-sm bg-background-2 px-2 py-1 focus:outline-none"
-                onChange={(e) => setMaiaVersion(e.target.value)}
-              >
-                {maiaOptions.map((maia) => (
-                  <option key={`opponent_${maia}`} value={maia}>
-                    {maia.replace('maia_kdd_', 'Maia ')}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-row items-center justify-start gap-2">
-              Time control:{' '}
-              <OptionSelect
-                options={TimeControlOptions}
-                labels={TimeControlOptionNames}
-                selected={timeControl}
-                onChange={setTimeControl}
-              />
-            </div>
-            <div className="flex flex-row items-center justify-start gap-2">
-              Maia time use:{' '}
-              <OptionSelect
-                options={[false, true]}
-                labels={['Instant', 'Human-like']}
-                selected={simulateMaiaTime}
-                onChange={setSimulateMaiaTime}
-              />
-            </div>
-            {openMoreOptions ? (
-              <div className="flex cursor-pointer flex-row items-center justify-start gap-1 text-sm">
+              </div>
+
+              <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  id="sample"
+                  id="customPosition"
                   checked={fen !== undefined}
                   onChange={() => setFen(fen === undefined ? '' : undefined)}
+                  className="accent-human-4"
                 />
-                <label htmlFor="sample">
-                  Start from position{' '}
-                  <abbr title="Start game at a custom position">?</abbr>
+                <label
+                  htmlFor="customPosition"
+                  className="text-sm text-primary"
+                >
+                  Start from custom position
                 </label>
               </div>
-            ) : null}
-            {fen !== undefined ? (
-              <div>
-                <input
-                  type="text"
-                  value={fen}
-                  placeholder="Starting FEN position"
-                  onChange={(e) => setFen(e.target.value)}
-                  className="rounded-sm bg-background-2 px-1 py-1 text-sm text-secondary placeholder:text-secondary focus:outline-none"
-                />
-              </div>
-            ) : null}
-            <div className="flex w-full items-end justify-center gap-2">
+
+              {fen !== undefined && (
+                <div className="rounded bg-background-2 p-3">
+                  <label
+                    htmlFor="fen-input"
+                    className="mb-1 block text-sm font-medium text-primary"
+                  >
+                    Starting FEN position:
+                  </label>
+                  <input
+                    id="fen-input"
+                    type="text"
+                    value={fen}
+                    placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+                    onChange={(e) => setFen(e.target.value)}
+                    className="w-full rounded border border-background-3 bg-background-1 px-3 py-2 font-mono text-xs text-primary placeholder-secondary focus:border-human-4 focus:outline-none"
+                  />
+                  <p className="mt-1 text-xs text-secondary">
+                    Enter a valid FEN string to start from a specific position
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Color Selection Section */}
+          <div className="border-t border-white/10 p-4">
+            <p className="mb-3 text-center text-sm font-medium text-primary">
+              Choose your color:
+            </p>
+            <div className="flex items-center justify-center gap-3">
               <button
                 onClick={() => start('black')}
                 title="Play as black"
-                className="flex cursor-pointer select-none items-center justify-center rounded-sm border-none bg-background-2 p-2 text-center text-xl outline-none transition duration-200 hover:bg-human-4"
+                className="flex h-16 w-16 cursor-pointer items-center justify-center rounded bg-background-2 transition-colors hover:bg-human-4"
               >
-                <div className="relative h-16 w-16">
+                <div className="relative h-10 w-10">
                   <Image
                     src="/assets/pieces/black king.svg"
                     fill={true}
-                    alt=""
+                    alt="Play as black"
                   />
                 </div>
               </button>
               <button
                 onClick={() => start(undefined)}
-                title="Play as random colour"
-                className="flex cursor-pointer select-none items-center justify-center rounded-sm border-none bg-background-2 p-4 text-center text-xl outline-none transition duration-200 hover:bg-human-4"
+                title="Play as random color"
+                className="flex h-20 w-20 cursor-pointer items-center justify-center rounded bg-background-2 transition-colors hover:bg-human-4"
               >
-                <div className="relative h-20 w-20">
+                <div className="relative h-12 w-12">
                   <Image
-                    alt=""
+                    alt="Play as random color"
                     fill={true}
                     src="/assets/pieces/white black king.svg"
                   />
@@ -275,13 +357,13 @@ export const PlaySetupModal: React.FC<Props> = (props: Props) => {
               <button
                 onClick={() => start('white')}
                 title="Play as white"
-                className="flex cursor-pointer select-none items-center justify-center rounded-sm border-none bg-background-2 p-2 text-center text-xl outline-none transition duration-200 hover:bg-human-4"
+                className="flex h-16 w-16 cursor-pointer items-center justify-center rounded bg-background-2 transition-colors hover:bg-human-4"
               >
-                <div className="relative h-16 w-16">
+                <div className="relative h-10 w-10">
                   <Image
                     src="/assets/pieces/white king.svg"
                     fill={true}
-                    alt=""
+                    alt="Play as white"
                   />
                 </div>
               </button>

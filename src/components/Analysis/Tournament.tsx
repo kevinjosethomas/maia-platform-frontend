@@ -7,6 +7,23 @@ import {
   CaretDownIcon,
 } from 'src/components/Icons/icons'
 import { AnalysisTournamentGame } from 'src/types'
+type Props = {
+  id: string
+  index: number
+  currentId: string[] | null
+  openIndex: number | null
+  setOpenIndex: (index: number | null) => void
+  loadingIndex: number | null
+  setLoadingIndex: (index: number | null) => void
+  openElement: React.RefObject<HTMLDivElement>
+  selectedGameElement: React.RefObject<HTMLButtonElement>
+  analysisTournamentList: Map<string, AnalysisTournamentGame[]>
+  loadNewTournamentGame: (
+    id: string[],
+    setCurrentMove?: Dispatch<SetStateAction<number>>,
+  ) => Promise<void>
+  setCurrentMove?: Dispatch<SetStateAction<number>>
+}
 
 export const Tournament = ({
   id,
@@ -21,23 +38,7 @@ export const Tournament = ({
   analysisTournamentList,
   loadNewTournamentGame,
   setCurrentMove,
-}: {
-  id: string
-  index: number
-  currentId: string[] | null
-  openIndex: number | null
-  setOpenIndex: (index: number | null) => void
-  loadingIndex: number | null
-  setLoadingIndex: (index: number | null) => void
-  openElement: React.RefObject<HTMLDivElement>
-  selectedGameElement: React.RefObject<HTMLButtonElement>
-  analysisTournamentList: Map<string, AnalysisTournamentGame[]>
-  loadNewTournamentGame: (
-    id: string[],
-    setCurrentMove: Dispatch<SetStateAction<number>>,
-  ) => Promise<void>
-  setCurrentMove: Dispatch<SetStateAction<number>>
-}) => {
+}: Props) => {
   const games = analysisTournamentList.get(id)
   const [sectionId, title] = id.split('---')
   const opened = openIndex == index
@@ -57,7 +58,7 @@ export const Tournament = ({
       >
         <div className="flex items-center gap-1">
           <div className="w-4">{openIndex == index ? MinusIcon : PlusIcon}</div>
-          <div className="text-left">{title}</div>
+          <div className="text-left text-sm">{title}</div>
         </div>
         <div className="w-2">
           {openIndex == index ? CaretUpIcon : CaretDownIcon}
@@ -89,19 +90,21 @@ export const Tournament = ({
             >
               <div className="flex items-center justify-start gap-2">
                 <div
-                  className={`flex h-full w-10 justify-center py-1 ${selected ? 'bg-background-3' : 'bg-background-2 group-hover:bg-background-3'}`}
+                  className={`flex h-full w-9 justify-center py-1 ${selected ? 'bg-background-3' : 'bg-background-2 group-hover:bg-background-3'}`}
                 >
                   {loadingIndex === j ? (
                     <div className="spinner" />
                   ) : (
-                    <p className="text-primary">{game.game_index}</p>
+                    <p className="text-sm text-secondary">{game.game_index}</p>
                   )}
                 </div>
-                <div className="flex items-center whitespace-nowrap py-1">
+                <div className="items-center whitespace-nowrap text-sm">
                   {game.white.split(',')[0]} – {game.black.split(',')[0]}
                 </div>
               </div>
-              <div>{game.result}</div>
+              <div className="whitespace-nowrap text-sm font-light text-secondary">
+                {game.result?.replace('1/2', '½').replace('1/2', '½')}
+              </div>
             </button>
           )
         })}

@@ -1,4 +1,4 @@
-import { Game, Move, MoveMap } from '..'
+import { Game, Move, MoveMap, GameTree } from '..'
 
 export interface AvailableMoves {
   [fromTo: string]: Move
@@ -11,6 +11,7 @@ export interface TrainingGame extends Game {
   availableMoves: AvailableMoves
   targetIndex: number
   result?: boolean
+  tree: GameTree
 }
 
 export type Status =

@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { useCallback, useContext, useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { Fragment, useCallback, useContext, useEffect, useState } from 'react'
 
 import {
   SunIcon,
@@ -8,177 +9,269 @@ import {
   TuringIcon,
   TrainIcon,
   RegularPlayIcon,
+  ChessboardIcon,
+  StarIcon,
 } from 'src/components/Icons/icons'
-import { getPlayerStats } from 'src/api/home'
+import { PlayType } from 'src/types'
+import { getGlobalStats } from 'src/api'
 import { AuthContext, ModalContext } from 'src/contexts'
+import { AnimatedNumber } from 'src/components/Misc/AnimatedNumber'
 
 interface Props {
   scrollHandler: () => void
 }
 
+interface FeatureCardProps {
+  icon: React.ReactNode
+  title: string
+  description: string
+  onClick?: () => void
+  href?: string
+  external?: boolean
+  index: number
+}
+
+const FeatureCard: React.FC<FeatureCardProps> = ({
+  icon,
+  title,
+  description,
+  onClick,
+  href,
+  external,
+  index,
+}) => {
+  const CardWrapper = ({ children }: { children: React.ReactNode }) => {
+    if (onClick) {
+      return (
+        <button onClick={onClick} className="w-full">
+          {children}
+        </button>
+      )
+    }
+    if (href) {
+      if (external) {
+        return (
+          <a href={href} target="_blank" rel="noreferrer">
+            {children}
+          </a>
+        )
+      }
+      return <Link href={href}>{children}</Link>
+    }
+    return <>{children}</>
+  }
+
+  return (
+    <CardWrapper>
+      <motion.div
+        className="flex h-full min-h-[140px] cursor-pointer select-none flex-col items-center justify-center gap-3 rounded-md border-none bg-background-2 p-4 text-center hover:bg-human-4/20"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          duration: 0.3,
+          delay: 0.2 + index * 0.1,
+          ease: 'easeOut',
+        }}
+        whileHover={{
+          scale: 1.03,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          transition: { duration: 0.2 },
+        }}
+      >
+        <motion.div
+          className="w-10"
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{
+            duration: 0.3,
+            delay: 0.3 + index * 0.1,
+          }}
+        >
+          {icon}
+        </motion.div>
+        <div className="flex flex-col">
+          <motion.h2
+            className="text-lg font-bold"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{
+              duration: 0.3,
+              delay: 0.4 + index * 0.1,
+            }}
+          >
+            {title}
+          </motion.h2>
+          <motion.p
+            className="text-xs"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{
+              duration: 0.3,
+              delay: 0.5 + index * 0.1,
+            }}
+          >
+            {description}
+          </motion.p>
+        </div>
+      </motion.div>
+    </CardWrapper>
+  )
+}
+
 export const HomeHero: React.FC<Props> = ({ scrollHandler }: Props) => {
+  const [globalStats, setGlobalStats] = useState<{
+    play_moves_total: number
+    puzzle_games_total: number
+    turing_games_total: number
+  }>()
   const { setPlaySetupModalProps } = useContext(ModalContext)
+  const { user, connectLichess } = useContext(AuthContext)
 
   const startGame = useCallback(
-    (playType) => {
+    (playType: PlayType) => {
       setPlaySetupModalProps({ playType: playType })
     },
     [setPlaySetupModalProps],
   )
 
-  const { user, connectLichess } = useContext(AuthContext)
-
-  const [stats, setStats] = useState({
-    regularRating: 1500,
-    handRating: 1500,
-    brainRating: 1500,
-    trainRating: 1500,
-    botNotRating: 1500,
-  })
   useEffect(() => {
     ;(async () => {
-      setStats(await getPlayerStats())
+      const data = await getGlobalStats()
+      setGlobalStats(data)
     })()
   }, [])
 
-  const profileContent = (
-    <>
-      <div className="flex flex-row items-center gap-2">
-        <i className="*:h-7 *:w-7 *:fill-primary">{UserIcon}</i>
-        <p>{user?.displayName || 'Guest'}</p>
-      </div>
-      {user?.lichessId ? (
-        <div className="flex flex-row items-center gap-6">
-          {[
-            ['Regular', stats.regularRating || '...'],
-            ['Hand', stats.handRating || '...'],
-            ['Brain', stats.brainRating || '...'],
-            ['Puzzles', stats.trainRating || '...'],
-            ['Bot/Not', stats.botNotRating || '...'],
-          ].map(([title, rating]) => (
-            <div key={title} className="flex flex-col items-center gap-0.5">
-              <div className="text-xs uppercase">{title}</div>
-              <div className="text-xl">{rating}</div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center">
-          <button
-            className="rounded-sm bg-[#629924] px-2 py-1 text-sm text-white transition duration-200 hover:bg-opacity-80"
-            onClick={() => connectLichess()}
-          >
-            Connect with Lichess
-          </button>
-          <p className="text-sm">to save your stats and more!</p>
-        </div>
-      )}
-    </>
-  )
-
   return (
-    <div className="relative flex flex-col items-center justify-center">
+    <Fragment>
       <BetaBlurb />
-      <div className="flex w-full max-w-[1200px] flex-col items-center justify-center gap-16 p-4 text-left md:flex-row">
-        <div className="flex w-full flex-col items-start justify-center gap-2 md:w-[40%]">
-          <div className="flex flex-col">
-            <h1 className="text-4xl font-bold leading-relaxed">
-              A human-like chess engine
-            </h1>
-            <p className="text-2xl">
-              Maia is a neural network chess engine with a more human-like
-              style, trained from online human games.
-            </p>
+      <div className="relative flex flex-col items-center justify-center gap-14 overflow-hidden pb-12 pt-8 md:pb-16 md:pt-20">
+        <div className="z-10 flex w-full max-w-[1200px] flex-col items-center justify-center gap-10 p-4 text-left md:flex-row md:gap-20">
+          <div className="flex w-full flex-col items-start justify-center gap-6 md:w-[40%] md:gap-8">
+            <div className="flex flex-col gap-3 md:gap-4">
+              <motion.h1
+                className="text-4xl font-bold leading-tight md:text-5xl"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+              >
+                A human-like chess engine
+              </motion.h1>
+              <motion.p
+                className="text-xl text-primary/80 md:text-2xl"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.1, ease: 'easeOut' }}
+              >
+                Maia is a neural network chess engine with a more human-like
+                style, trained from online human games.
+              </motion.p>
+            </div>
+            <motion.div
+              className="flex flex-col gap-4 sm:flex-row"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.2, ease: 'easeOut' }}
+            >
+              <motion.button
+                className="flex items-center justify-center gap-2 rounded-md bg-human-4 px-6 py-3 text-white hover:bg-opacity-90"
+                onClick={scrollHandler}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+              >
+                <p>Learn More</p>
+                <i className="h-4">{ArrowIcon}</i>
+              </motion.button>
+              {!user?.lichessId && (
+                <motion.button
+                  className="flex items-center justify-center gap-2 rounded-md border border-background-2 bg-background-1 px-6 py-3 hover:bg-background-2"
+                  onClick={() => connectLichess()}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  Connect with Lichess
+                </motion.button>
+              )}
+            </motion.div>
           </div>
-          <button
-            className="flex items-center gap-4 rounded-sm bg-background-2 px-4 py-3 hover:bg-human-4/30"
-            onClick={scrollHandler}
-          >
-            <p>More about Maia</p>
-            <i className="h-4">{ArrowIcon}</i>
-          </button>
+          <div className="grid w-full flex-1 grid-cols-1 gap-4 md:grid-cols-3">
+            <FeatureCard
+              icon={<RegularPlayIcon />}
+              title="Play Maia"
+              description="Play chess against the human-like Maia engine"
+              {...(user?.lichessId
+                ? { onClick: () => startGame('againstMaia') }
+                : { href: 'https://lichess.org/@/maia1', external: true })}
+              index={0}
+            />
+            <FeatureCard
+              icon={<ChessboardIcon />}
+              title="Analysis"
+              description="Analyze games with Maia's human-like insights"
+              href="/analysis"
+              index={1}
+            />
+            <FeatureCard
+              icon={<TrainIcon />}
+              title="Train"
+              description="Improve your skills with Maia's training puzzles"
+              href="/train"
+              index={2}
+            />
+            <FeatureCard
+              icon={<TuringIcon />}
+              title="Hand & Brain"
+              description="Play a collaborative chess variant with Maia"
+              onClick={() => startGame('handAndBrain')}
+              index={3}
+            />
+            <FeatureCard
+              icon={<StarIcon />}
+              title="Openings"
+              description="Learn and practice chess openings with Maia"
+              href="/openings"
+              index={4}
+            />
+            <FeatureCard
+              icon={<TuringIcon />}
+              title="Bot-or-Not"
+              description="Distinguish between human and AI play"
+              href="/turing"
+              index={5}
+            />
+          </div>
         </div>
-        <div className="grid w-full flex-1 grid-cols-1 gap-5 pb-4 md:w-auto md:grid-cols-2">
-          {user?.lichessId ? (
-            <button
-              onClick={() => startGame('againstMaia')}
-              className="flex cursor-pointer select-none flex-col items-center justify-center gap-2 rounded-sm border-none bg-[#7095c7] py-6 text-center text-white transition duration-200 hover:bg-opacity-80"
-            >
-              <i className="w-12">
-                <RegularPlayIcon />
-              </i>
-              <div className="flex flex-col">
-                <h2 className="text-xl font-bold">Play Maia</h2>
-                <p className="text-xs">Classic chess versus human-like Maia</p>
-              </div>
-            </button>
-          ) : (
-            <a
-              href="https://lichess.org/@/maia1"
-              target="_blank"
-              rel="noreferrer"
-              className="flex cursor-pointer select-none flex-col items-center justify-center gap-2 rounded-sm border-none bg-[#7095c7] py-6 text-center text-white transition duration-200 hover:bg-opacity-80"
-            >
-              <i className="w-12">
-                <RegularPlayIcon />
-              </i>
-              <div className="flex flex-col">
-                <h2 className="text-xl font-bold">Play Maia</h2>
-                <p className="text-xs">Classic chess versus human-like Maia</p>
-              </div>
-            </a>
-          )}
-          <button
-            onClick={() => startGame('handAndBrain')}
-            className="flex cursor-pointer select-none flex-col items-center justify-center gap-2 rounded-sm border-none bg-[#6e879c] py-6 text-center text-white transition duration-200 hover:bg-opacity-80"
-          >
-            <i className="w-12">
-              <TuringIcon />
-            </i>
-            <div className="flex flex-col">
-              <h2 className="text-xl font-bold">Play Hand and Brain</h2>
-              <p className="text-xs">A chess variant with Maia on your team</p>
-            </div>
-          </button>
-          <Link
-            href="/train"
-            className="flex cursor-pointer select-none flex-col items-center justify-center gap-2 rounded-sm border-none bg-[#958a6d] py-6 text-center text-white transition duration-200 hover:bg-opacity-80"
-          >
-            <i className="w-12">
-              <TrainIcon />
-            </i>
-            <div className="flex flex-col">
-              <h2 className="text-xl font-bold">Train</h2>
-              <p className="text-xs">Solve puzzles with Maia</p>
-            </div>
-          </Link>
-          <Link
-            href="/turing"
-            className="flex cursor-pointer select-none flex-col items-center justify-center gap-2 rounded-sm border-none bg-[#a3a6a1] py-6 text-center text-white transition duration-200 hover:bg-opacity-80"
-          >
-            <i className="w-12">
-              <TuringIcon />
-            </i>
-            <div className="flex flex-col">
-              <h2 className="text-xl font-bold">Bot-or-Not</h2>
-              <p className="text-xs">Distinguish human from machine play</p>
-            </div>
-          </Link>
-          {user?.lichessId ? (
-            <Link
-              href="/profile"
-              className="flex w-full flex-col items-start justify-between gap-4 rounded-sm bg-background-2 px-6 py-4 transition duration-200 hover:bg-human-4/20 md:col-span-2 md:h-20 md:flex-row md:items-center md:gap-0 md:py-0"
-            >
-              {profileContent}
-            </Link>
-          ) : (
-            <div className="flex w-full flex-row items-center justify-between rounded-sm bg-background-2 px-6 py-4 md:col-span-2 md:h-20 md:py-0">
-              {profileContent}
-            </div>
-          )}
-        </div>
+        <motion.div
+          className="grid grid-cols-3 gap-6 px-2 md:flex"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+        >
+          <p className="text-center text-base text-primary/80">
+            <AnimatedNumber
+              value={globalStats?.play_moves_total || 0}
+              className="font-bold"
+            />{' '}
+            moves played
+          </p>
+          <p className="text-center text-base text-primary/80">
+            <AnimatedNumber
+              value={globalStats?.puzzle_games_total || 0}
+              className="font-bold"
+            />{' '}
+            puzzle games solved
+          </p>
+          <p className="text-center text-base text-primary/80">
+            <AnimatedNumber
+              value={globalStats?.turing_games_total || 0}
+              className="font-bold"
+            />{' '}
+            turing games played
+          </p>
+        </motion.div>
       </div>
-    </div>
+    </Fragment>
   )
 }
 
@@ -186,70 +279,54 @@ function BetaBlurb() {
   const { user, connectLichess } = useContext(AuthContext)
 
   return (
-    <>
+    <div className="mt-2 flex items-center justify-center md:mt-8">
       {user?.lichessId ? (
-        <div className="my-4 flex w-screen flex-col items-start bg-engine-1 p-3 transition md:mt-0 md:w-auto md:rounded">
-          <div className="flex items-center gap-2">
-            <div className="*:h-5 *:w-5">{SunIcon}</div>
-            <p className="text-lg font-medium">Maia Chess is in private beta</p>
-          </div>
-          <p className="max-w-2xl text-left text-sm">
-            You are logged in to the new Beta Maia Chess platform! Report any
-            bugs using the Feedback form in the header, and{' '}
+        <motion.div
+          className="flex flex-row items-center gap-3 bg-human-4 p-2 px-6 transition md:mt-0 md:rounded-full"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="*:h-5 *:w-5">{SunIcon}</div>
+          <p>
+            Maia Chess is in private beta. Join our Discord community{' '}
             <a
               target="_blank"
               rel="noreferrer"
               className="underline"
               href="https://discord.gg/Az93GqEAs7"
             >
-              join our Discord
-            </a>{' '}
-            and stay tuned for our full release in the upcoming weeks.
+              here
+            </a>
+            .
           </p>
-        </div>
+        </motion.div>
       ) : (
-        <div className="my-4 flex w-screen flex-col items-start bg-human-4 p-3 transition md:mt-0 md:w-auto md:rounded">
-          <div className="flex items-center gap-2">
-            <div className="*:h-5 *:w-5">{SunIcon}</div>
-            <p className="text-lg font-medium">Maia Chess is in private beta</p>
-          </div>
-          <p className="max-w-4xl text-left text-sm">
-            We are currently beta testing the new Maia Chess platform! If you
-            were invited to test the Beta launch, please{' '}
-            <button onClick={connectLichess} className="underline">
-              sign in with Lichess
-            </button>{' '}
-            before proceeding. Otherwise, you can{' '}
+        <motion.div
+          className="flex flex-row items-center gap-3 bg-human-4 p-2 px-6 transition md:mt-0 md:rounded-full"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="*:h-5 *:w-5">{SunIcon}</div>
+          <p>
+            Maia Chess is in private beta. Sign up{' '}
             <a
               target="_blank"
               rel="noreferrer"
               className="underline"
               href="https://forms.gle/VAUKap4uwMGXJH3N8"
             >
-              sign up for the beta
+              here
             </a>{' '}
-            or play{' '}
-            <a
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
-              href="https://lichess.org/@/maia1"
-            >
-              Maia on Lichess
-            </a>
-            !{' '}
-            <a
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
-              href="https://discord.gg/Az93GqEAs7"
-            >
-              Join our Discord
-            </a>{' '}
-            and stay tuned for our full release in the upcoming weeks.
+            and sign in with{' '}
+            <button onClick={connectLichess} className="underline">
+              Lichess
+            </button>
+            .
           </p>
-        </div>
+        </motion.div>
       )}
-    </>
+    </div>
   )
 }

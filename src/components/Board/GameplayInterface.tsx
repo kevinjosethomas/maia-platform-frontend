@@ -1,25 +1,18 @@
-import Head from 'next/head'
-import type { DrawShape } from 'chessground/draw'
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
-
-import {
-  AuthContext,
-  ThemeContext,
-  WindowSizeContext,
-  GameControllerContext,
-} from 'src/contexts'
 import {
   GameInfo,
-  GameClock,
   GameBoard,
+  GameClock,
   ExportGame,
   StatsDisplay,
+  PromotionOverlay,
   MovesContainer,
   BoardController,
-  PromotionOverlay,
 } from 'src/components'
-import { useGameController } from 'src/hooks'
+import Head from 'next/head'
 import { useUnload } from 'src/hooks/useUnload'
+import type { DrawShape } from 'chessground/draw'
+import { useCallback, useContext, useMemo, useState } from 'react'
+import { AuthContext, WindowSizeContext } from 'src/contexts'
 import { PlayControllerContext } from 'src/contexts/PlayControllerContext/PlayControllerContext'
 
 interface Props {
@@ -29,69 +22,67 @@ interface Props {
   playAgain?: () => void
 }
 
-export const GameplayInterface: React.FC<Props> = (
+export const GameplayInterface: React.FC<React.PropsWithChildren<Props>> = (
   props: React.PropsWithChildren<Props>,
 ) => {
   const {
     game,
-    playType,
-    maiaVersion,
-    availableMoves,
-    makeMove,
-    player,
-    setCurrentSquare,
-    timeControl,
     stats,
+    player,
+    playType,
+    gameTree,
+    goToNode,
+    plyCount,
+    orientation,
+    timeControl,
+    currentNode,
+    maiaVersion,
+    goToRootNode,
+    goToNextNode,
+    availableMoves,
+    makePlayerMove,
+    setOrientation,
+    goToPreviousNode,
   } = useContext(PlayControllerContext)
-  const { theme } = useContext(ThemeContext)
-  const { isMobile } = useContext(WindowSizeContext)
-
-  const controller = useGameController(game, 0, player)
 
   const { user } = useContext(AuthContext)
+  const { isMobile } = useContext(WindowSizeContext)
 
   const [promotionFromTo, setPromotionFromTo] = useState<
     [string, string] | null
   >(null)
 
-  const setCurrentIndex = controller.setCurrentIndex
-
-  const setCurrentMove = useCallback(
-    (move) => {
+  const onPlayerMakeMove = useCallback(
+    (move: [string, string] | null) => {
       if (move) {
-        const matching = availableMoves.filter(
-          (m) => m.from == move[0] && m.to == move[1],
-        )
+        const matching = availableMoves.filter((m) => {
+          return m.from == move[0] && m.to == move[1]
+        })
 
         if (matching.length > 1) {
           // Multiple matching moves (i.e. promotion)
-          // Show promotion UI
           setPromotionFromTo(move)
         } else {
           const moveUci =
             matching[0].from + matching[0].to + (matching[0].promotion ?? '')
-          makeMove(moveUci)
+          makePlayerMove(moveUci)
         }
       }
     },
-    [availableMoves, makeMove, setPromotionFromTo],
+    [availableMoves, makePlayerMove, setPromotionFromTo],
   )
 
-  const selectPromotion = useCallback(
-    (piece) => {
+  const onPlayerSelectPromotion = useCallback(
+    (piece: string) => {
       if (!promotionFromTo) {
         return
       }
       setPromotionFromTo(null)
       const moveUci = promotionFromTo[0] + promotionFromTo[1] + piece
-      makeMove(moveUci)
+      makePlayerMove(moveUci)
     },
-    [promotionFromTo, setPromotionFromTo, makeMove],
+    [promotionFromTo, setPromotionFromTo, makePlayerMove],
   )
-
-  useEffect(() => {
-    setCurrentIndex(game.moves.length - 1)
-  }, [setCurrentIndex, game])
 
   useUnload((e) => {
     if (!game.termination) {
@@ -100,7 +91,7 @@ export const GameplayInterface: React.FC<Props> = (
     }
   })
 
-  const moveMap = useMemo(() => {
+  const availableMovesMapped = useMemo(() => {
     const result = new Map()
 
     for (const move of availableMoves) {
@@ -124,9 +115,7 @@ export const GameplayInterface: React.FC<Props> = (
   const Info = (
     <>
       <div className="flex w-full items-center justify-between text-secondary">
-        <p>
-          {theme == 'dark' ? '●' : '○'} {whitePlayer ?? 'Unknown'}
-        </p>
+        <p>● {whitePlayer ?? 'Unknown'}</p>
         <p>
           {game.termination?.winner === 'white' ? (
             <span className="text-engine-3">1</span>
@@ -138,9 +127,7 @@ export const GameplayInterface: React.FC<Props> = (
         </p>
       </div>
       <div className="flex w-full items-center justify-between text-secondary">
-        <p>
-          {theme == 'light' ? '●' : '○'} {blackPlayer ?? 'Unknown'}
-        </p>
+        <p>○ {blackPlayer ?? 'Unknown'}</p>
         <p>
           {game.termination?.winner === 'black' ? (
             <span className="text-engine-3">1</span>
@@ -163,7 +150,7 @@ export const GameplayInterface: React.FC<Props> = (
 
   const desktopLayout = (
     <>
-      <div className="flex h-full flex-1 flex-col justify-center gap-1">
+      <div className="flex h-full flex-1 flex-col justify-center gap-1 py-5 md:py-10">
         <div className="flex w-full flex-row items-center justify-center gap-1">
           <div
             style={{
@@ -185,9 +172,12 @@ export const GameplayInterface: React.FC<Props> = (
             <div className="flex w-full flex-col gap-2">
               <ExportGame
                 game={game}
+                gameTree={gameTree}
+                currentNode={currentNode}
                 whitePlayer={whitePlayer ?? 'Unknown'}
                 blackPlayer={blackPlayer ?? 'Unknown'}
-                maiaVersion={maiaTitle}
+                event={`Play vs. ${maiaTitle}`}
+                type="play"
               />
               <StatsDisplay stats={stats} hideSession={true} />
             </div>
@@ -195,16 +185,17 @@ export const GameplayInterface: React.FC<Props> = (
           <div className="relative flex aspect-square w-full max-w-[75vh]">
             <GameBoard
               game={game}
-              moves={moveMap}
-              setCurrentMove={setCurrentMove}
-              setCurrentSquare={setCurrentSquare}
+              availableMoves={availableMovesMapped}
+              onPlayerMakeMove={onPlayerMakeMove}
               shapes={props.boardShapes}
+              currentNode={currentNode}
+              orientation={orientation}
             />
             {promotionFromTo ? (
               <PromotionOverlay
                 player={player}
                 file={promotionFromTo[1].slice(0)}
-                selectPromotion={selectPromotion}
+                onPlayerSelectPromotion={onPlayerSelectPromotion}
               />
             ) : null}
           </div>
@@ -216,19 +207,33 @@ export const GameplayInterface: React.FC<Props> = (
           >
             {timeControl != 'unlimited' ? (
               <GameClock
-                player={controller.orientation == 'white' ? 'black' : 'white'}
+                player={orientation == 'white' ? 'black' : 'white'}
                 reversed={false}
               />
             ) : null}
             <div className="relative bottom-0 h-full min-h-[38px] flex-1">
-              <MovesContainer game={game} termination={game.termination} />
+              <MovesContainer
+                game={game}
+                termination={game.termination}
+                type="play"
+              />
             </div>
             <div>{props.children}</div>
             <div className="flex-none">
-              <BoardController />
+              <BoardController
+                orientation={orientation}
+                setOrientation={setOrientation}
+                currentNode={currentNode}
+                plyCount={plyCount}
+                goToNode={goToNode}
+                goToNextNode={goToNextNode}
+                goToPreviousNode={goToPreviousNode}
+                goToRootNode={goToRootNode}
+                gameTree={gameTree}
+              />
             </div>
             {timeControl != 'unlimited' ? (
-              <GameClock player={controller.orientation} reversed={true} />
+              <GameClock player={orientation} reversed={true} />
             ) : null}
           </div>
         </div>
@@ -243,7 +248,7 @@ export const GameplayInterface: React.FC<Props> = (
           <div className="flex h-auto w-full flex-col gap-1">
             {timeControl != 'unlimited' ? (
               <GameClock
-                player={controller.orientation == 'white' ? 'black' : 'white'}
+                player={orientation == 'white' ? 'black' : 'white'}
                 reversed={false}
               />
             ) : null}
@@ -251,39 +256,66 @@ export const GameplayInterface: React.FC<Props> = (
           <div className="relative flex aspect-square h-[100vw] w-screen">
             <GameBoard
               game={game}
-              moves={moveMap}
-              setCurrentMove={setCurrentMove}
-              setCurrentSquare={setCurrentSquare}
+              availableMoves={availableMovesMapped}
+              onPlayerMakeMove={onPlayerMakeMove}
               shapes={props.boardShapes}
+              currentNode={currentNode}
+              orientation={orientation}
             />
             {promotionFromTo ? (
               <PromotionOverlay
                 player={player}
                 file={promotionFromTo[1].slice(0)}
-                selectPromotion={selectPromotion}
+                onPlayerSelectPromotion={onPlayerSelectPromotion}
               />
             ) : null}
           </div>
           <div className="flex h-auto w-full flex-col gap-1">
             {timeControl != 'unlimited' ? (
-              <GameClock player={controller.orientation} reversed={true} />
+              <GameClock player={orientation} reversed={true} />
             ) : null}
             <div className="flex-none">
-              <BoardController />
+              <BoardController
+                orientation={orientation}
+                setOrientation={setOrientation}
+                currentNode={currentNode}
+                plyCount={plyCount}
+                goToNode={goToNode}
+                goToNextNode={goToNextNode}
+                goToPreviousNode={goToPreviousNode}
+                goToRootNode={goToRootNode}
+                gameTree={gameTree}
+              />
+            </div>
+            <div className="w-full overflow-x-auto">
+              <div className="flex flex-row whitespace-nowrap py-2">
+                <MovesContainer
+                  game={game}
+                  termination={game.termination}
+                  type="play"
+                />
+              </div>
             </div>
             <div className="w-screen">{props.children}</div>
             <StatsDisplay stats={stats} hideSession={true} />
-            <ExportGame
-              game={game}
-              whitePlayer={whitePlayer ?? 'Unknown'}
-              blackPlayer={blackPlayer ?? 'Unknown'}
-              maiaVersion={maiaTitle}
-            />
+            <div className="px-2">
+              <ExportGame
+                game={game}
+                gameTree={gameTree}
+                currentNode={currentNode}
+                whitePlayer={whitePlayer ?? 'Unknown'}
+                blackPlayer={blackPlayer ?? 'Unknown'}
+                event={`Play vs. ${maiaTitle}`}
+                type="play"
+              />
+            </div>
           </div>
         </div>
       </div>
     </>
   )
+
+  const layouts = isMobile ? mobileLayout : desktopLayout
 
   return (
     <>
@@ -291,9 +323,7 @@ export const GameplayInterface: React.FC<Props> = (
         <title>Maia Chess - Play</title>
         <meta name="description" content="Turing survey" />
       </Head>
-      <GameControllerContext.Provider value={{ ...controller }}>
-        {isMobile ? mobileLayout : desktopLayout}
-      </GameControllerContext.Provider>
+      {layouts}
     </>
   )
 }

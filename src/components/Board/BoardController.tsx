@@ -1,61 +1,92 @@
-import { useCallback, useContext, useEffect, useMemo } from 'react'
-
 import { useWindowSize } from 'src/hooks'
-import { GameControllerContext } from 'src/contexts/'
+import { GameNode, GameTree } from 'src/types'
 import { FlipIcon } from 'src/components/Icons/icons'
+import { useCallback, useEffect, useMemo } from 'react'
 
 interface Props {
+  orientation: 'white' | 'black'
+  setOrientation: (orientation: 'white' | 'black') => void
+  currentNode: GameNode
+  plyCount: number
+  goToNode: (node: GameNode) => void
+  goToNextNode: () => void
+  goToPreviousNode: () => void
+  goToRootNode: () => void
+  gameTree: GameTree
   setCurrentMove?: (move: [string, string] | null) => void
+  disableFlip?: boolean
+  disablePrevious?: boolean
 }
 
-export const BoardController: React.FC<Props> = ({ setCurrentMove }: Props) => {
+export const BoardController: React.FC<Props> = ({
+  orientation,
+  setOrientation,
+  currentNode,
+  plyCount,
+  goToNode,
+  goToNextNode,
+  goToPreviousNode,
+  goToRootNode,
+  gameTree,
+  setCurrentMove,
+  disableFlip = false,
+  disablePrevious = false,
+}: Props) => {
   const { width } = useWindowSize()
-  const {
-    orientation,
-    setOrientation,
-    setCurrentIndex,
-    currentIndex,
-    plyCount,
-  } = useContext(GameControllerContext)
+
   const toggleBoardOrientation = useCallback(() => {
     setOrientation(orientation === 'white' ? 'black' : 'white')
   }, [orientation, setOrientation])
 
-  const hasPrevious = useMemo(() => currentIndex > 0, [currentIndex])
+  const hasPrevious = useMemo(() => {
+    if (currentNode !== undefined) {
+      return !!currentNode?.parent
+    }
+    return false
+  }, [currentNode])
 
-  const hasNext = useMemo(
-    () => currentIndex < plyCount - 1,
-    [currentIndex, plyCount],
-  )
+  const hasNext = useMemo(() => {
+    if (currentNode !== undefined) {
+      return !!currentNode?.mainChild
+    }
+    return false
+  }, [currentNode])
 
   const getFirst = useCallback(() => {
-    setCurrentIndex(0)
-    if (setCurrentMove) setCurrentMove(null)
-  }, [setCurrentIndex, setCurrentMove])
+    goToRootNode()
+    setCurrentMove?.(null)
+  }, [goToRootNode, setCurrentMove])
 
   const getPrevious = useCallback(() => {
-    setCurrentIndex(currentIndex - 1)
-    if (setCurrentMove) setCurrentMove(null)
-  }, [setCurrentIndex, currentIndex, setCurrentMove])
+    goToPreviousNode()
+    setCurrentMove?.(null)
+  }, [goToPreviousNode, setCurrentMove])
 
   const getNext = useCallback(() => {
-    setCurrentIndex(currentIndex + 1)
-    if (setCurrentMove) setCurrentMove(null)
-  }, [setCurrentIndex, currentIndex, setCurrentMove])
+    goToNextNode()
+    setCurrentMove?.(null)
+  }, [goToNextNode, setCurrentMove])
 
   const getLast = useCallback(() => {
-    setCurrentIndex(plyCount - 1)
+    let lastNode = currentNode
+    while (lastNode?.mainChild) {
+      lastNode = lastNode.mainChild
+    }
+    if (lastNode) {
+      goToNode(lastNode)
+    }
 
-    if (setCurrentMove) setCurrentMove(null)
-  }, [setCurrentIndex, plyCount, setCurrentMove])
+    setCurrentMove?.(null)
+  }, [currentNode, goToNode, setCurrentMove])
 
   useEffect(() => {
     if (width <= 670) return
+
     const onKeyDown = (e: KeyboardEvent) => {
       switch (e.key) {
         case 'Left':
         case 'ArrowLeft':
-          if (hasPrevious) getPrevious()
+          if (hasPrevious && !disablePrevious) getPrevious()
           break
         case 'Right':
         case 'ArrowRight':
@@ -67,10 +98,10 @@ export const BoardController: React.FC<Props> = ({ setCurrentMove }: Props) => {
           break
         case 'Up':
         case 'ArrowUp':
-          if (hasPrevious) getFirst()
+          if (hasPrevious && !disablePrevious) getFirst()
           break
         case 'f':
-          toggleBoardOrientation()
+          if (!disableFlip) toggleBoardOrientation()
           break
         default:
       }
@@ -79,50 +110,51 @@ export const BoardController: React.FC<Props> = ({ setCurrentMove }: Props) => {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [
+    width,
+    hasPrevious,
+    hasNext,
+    getPrevious,
+    getNext,
     getFirst,
     getLast,
-    getNext,
-    getPrevious,
-    hasNext,
-    hasPrevious,
     toggleBoardOrientation,
-    width,
-    currentIndex,
+    disablePrevious,
   ])
 
   return (
-    <div className="flex w-full flex-row items-center gap-[1px] rounded">
+    <div className="flex w-full flex-row items-center gap-[1px] md:rounded">
       <button
-        onClick={toggleBoardOrientation}
-        className="flex h-7 flex-1 items-center justify-center rounded-sm bg-button-secondary transition duration-200 hover:bg-human-3 disabled:bg-button-secondary/40"
+        onClick={disableFlip ? undefined : toggleBoardOrientation}
+        disabled={disableFlip}
+        className="flex h-7 flex-1 items-center justify-center bg-button-secondary transition duration-200 hover:bg-human-3 disabled:bg-button-secondary/40 md:rounded-sm"
       >
         {FlipIcon}
       </button>
       <button
         onClick={getFirst}
-        disabled={!hasPrevious}
-        className="flex h-7 flex-1 items-center justify-center rounded-sm bg-button-secondary transition duration-200 hover:bg-human-3 disabled:bg-button-secondary/40"
+        disabled={!hasPrevious || disablePrevious}
+        className="flex h-7 flex-1 items-center justify-center bg-button-secondary transition duration-200 hover:bg-human-3 disabled:bg-button-secondary/40 md:rounded-sm"
       >
         &#8249;&#8249;&#8249;
       </button>
       <button
         onClick={getPrevious}
-        disabled={!hasPrevious}
-        className="flex h-7 flex-1 items-center justify-center rounded-sm bg-button-secondary transition duration-200 hover:bg-human-3 disabled:bg-button-secondary/40"
+        disabled={!hasPrevious || disablePrevious}
+        className="flex h-7 flex-1 items-center justify-center bg-button-secondary transition duration-200 hover:bg-human-3 disabled:bg-button-secondary/40 md:rounded-sm"
       >
         &#8249;
       </button>
       <button
         onClick={getNext}
         disabled={!hasNext}
-        className="flex h-7 flex-1 items-center justify-center rounded-sm bg-button-secondary transition duration-200 hover:bg-human-3 disabled:bg-button-secondary/40"
+        className="flex h-7 flex-1 items-center justify-center bg-button-secondary transition duration-200 hover:bg-human-3 disabled:bg-button-secondary/40 md:rounded-sm"
       >
         &#8250;
       </button>
       <button
         onClick={getLast}
         disabled={!hasNext}
-        className="flex h-7 flex-1 items-center justify-center rounded-sm bg-button-secondary transition duration-200 hover:bg-human-3 disabled:bg-button-secondary/40"
+        className="flex h-7 flex-1 items-center justify-center bg-button-secondary transition duration-200 hover:bg-human-3 disabled:bg-button-secondary/40 md:rounded-sm"
       >
         &#8250;&#8250;&#8250;
       </button>

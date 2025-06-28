@@ -22,3 +22,63 @@ export const computeColour = (nx: number, ny: number) => {
     normalizedNx,
   ).hex()
 }
+
+export const generateColor = (
+  stockfishRank: number,
+  maiaRank: number,
+  maxRank: number,
+  redHex = '#FF0000',
+  blueHex = '#0000FF',
+): string => {
+  /**
+   * Generates a distinct hex color based on the ranks of a move in Stockfish and Maia outputs.
+   *
+   * @param stockfishRank - Rank of the move in Stockfish output (1 = best).
+   * @param maiaRank - Rank of the move in Maia output (1 = best).
+   * @param maxRank - Maximum rank possible (for normalizing ranks).
+   * @param redHex - Hex code for the red color (default "#FF0000").
+   * @param blueHex - Hex code for the blue color (default "#0000FF").
+   *
+   * @returns A more distinct blended hex color code.
+   */
+
+  const normalizeRank = (rank: number) =>
+    Math.pow(1 - Math.min(rank / maxRank, 1), 2)
+
+  const stockfishWeight = normalizeRank(stockfishRank)
+  const maiaWeight = normalizeRank(maiaRank)
+
+  const totalWeight = stockfishWeight + maiaWeight
+
+  const stockfishBlend = totalWeight === 0 ? 0.5 : stockfishWeight / totalWeight
+  const maiaBlend = totalWeight === 0 ? 0.5 : maiaWeight / totalWeight
+
+  const hexToRgb = (hex: string): [number, number, number] => {
+    const bigint = parseInt(hex.slice(1), 16)
+    return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255]
+  }
+
+  const rgbToHex = ([r, g, b]: [number, number, number]): string => {
+    return `#${[r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('')}`
+  }
+
+  const redRgb = hexToRgb(redHex)
+  const blueRgb = hexToRgb(blueHex)
+
+  const blendedRgb: [number, number, number] = [
+    Math.round(stockfishBlend * blueRgb[0] + maiaBlend * redRgb[0]),
+    Math.round(stockfishBlend * blueRgb[1] + maiaBlend * redRgb[1]),
+    Math.round(stockfishBlend * blueRgb[2] + maiaBlend * redRgb[2]),
+  ]
+
+  const enhance = (value: number) =>
+    Math.min(255, Math.max(0, Math.round(value * 1.2)))
+
+  const enhancedRgb: [number, number, number] = blendedRgb.map(enhance) as [
+    number,
+    number,
+    number,
+  ]
+
+  return rgbToHex(enhancedRgb)
+}

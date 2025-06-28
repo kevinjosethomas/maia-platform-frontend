@@ -1,157 +1,14 @@
+import { startGame } from 'src/api'
 import { NextPage } from 'next/types'
 import { useRouter } from 'next/router'
-import { backOff } from 'exponential-backoff'
-import { useContext, useEffect, useMemo } from 'react'
-
-import {
-  startGame,
-  getGameMove,
-  submitGameMove,
-  getPlayPlayerStats,
-} from 'src/api'
 import { ModalContext } from 'src/contexts'
-import { useStats } from 'src/hooks/useStats'
+import { useContext, useEffect, useMemo } from 'react'
+import { Loading, PlayControls } from 'src/components'
 import { Color, TimeControl, PlayGameConfig } from 'src/types'
-import { usePlayController } from 'src/hooks/usePlayController'
-import { Loading, PlayControls, GameplayInterface } from 'src/components'
+import { GameplayInterface } from 'src/components/Board/GameplayInterface'
+import { useVsMaiaPlayController } from 'src/hooks/usePlayController/useVsMaiaController'
 import { PlayControllerContext } from 'src/contexts/PlayControllerContext/PlayControllerContext'
 
-const playStatsLoader = async () => {
-  const stats = await getPlayPlayerStats()
-  return {
-    gamesPlayed: stats.playGamesPlayed,
-    gamesWon: stats.playWon,
-    rating: stats.playElo,
-  }
-}
-
-const useVsMaiaPlayController = (
-  id: string,
-  playGameConfig: PlayGameConfig,
-) => {
-  const controller = usePlayController(id, playGameConfig)
-
-  const [stats, incrementStats, updateRating] = useStats(playStatsLoader)
-
-  const makeMove = async (moveUci: string) => {
-    const newMoves = [...controller.moves, moveUci]
-
-    const moveTime = controller.updateClock()
-    controller.setMoves(newMoves)
-    controller.setMoveTimes([...controller.moveTimes, moveTime])
-  }
-
-  useEffect(() => {
-    let canceled = false
-
-    const makeMaiaMove = async () => {
-      if (
-        controller.game.id &&
-        !controller.playerActive &&
-        !controller.game.termination
-      ) {
-        const maiaClock =
-          (controller.player == 'white'
-            ? controller.blackClock
-            : controller.whiteClock) / 1000
-        const initialClock = controller.timeControl.includes('+')
-          ? parseInt(controller.timeControl.split('+')[0]) * 60
-          : 0
-
-        const maiaMoves = await backOff(
-          () =>
-            getGameMove(
-              controller.moves,
-              playGameConfig.maiaVersion,
-              playGameConfig.startFen,
-              null,
-              playGameConfig.simulateMaiaTime ? initialClock : 0,
-              playGameConfig.simulateMaiaTime ? maiaClock : 0,
-            ),
-          {
-            jitter: 'full',
-          },
-        )
-        const nextMove = maiaMoves['top_move']
-        const moveDelay = maiaMoves['move_delay']
-
-        if (canceled) {
-          return
-        }
-
-        if (playGameConfig.simulateMaiaTime) {
-          setTimeout(() => {
-            const moveTime = controller.updateClock()
-            controller.setMoves([...controller.moves, nextMove])
-            controller.setMoveTimes([...controller.moveTimes, moveTime])
-          }, moveDelay * 1000)
-        } else {
-          const moveTime = controller.updateClock()
-          controller.setMoves([...controller.moves, nextMove])
-          controller.setMoveTimes([...controller.moveTimes, moveTime])
-        }
-      }
-    }
-
-    makeMaiaMove()
-
-    return () => {
-      canceled = true
-    }
-  }, [controller, playGameConfig])
-
-  // Logging
-  useEffect(() => {
-    const gameOverState = controller.game.termination?.type || 'not_over'
-
-    if (controller.moves.length == 0 && gameOverState == 'not_over') {
-      return
-    }
-
-    const winner = controller.game.termination?.winner
-
-    const submitFn = async () => {
-      const response = await backOff(
-        () =>
-          submitGameMove(
-            controller.game.id,
-            controller.moves,
-            controller.moveTimes,
-            gameOverState,
-            'play',
-            playGameConfig.startFen || undefined,
-            winner,
-          ),
-        {
-          jitter: 'full',
-        },
-      )
-
-      // Only update stats after final move submitted
-      if (controller.game.termination) {
-        const winner = controller.game.termination?.winner
-        updateRating(response.player_elo)
-        incrementStats(1, winner == playGameConfig.player ? 1 : 0)
-      }
-    }
-    submitFn()
-  }, [
-    controller.game.id,
-    controller.moves,
-    controller.game.termination,
-    controller.moveTimes,
-    playGameConfig.startFen,
-    incrementStats,
-    updateRating,
-    playGameConfig.player,
-  ])
-
-  return {
-    ...controller,
-    makeMove,
-    stats,
-  }
-}
 interface Props {
   id: string
   playGameConfig: PlayGameConfig
@@ -165,10 +22,31 @@ const PlayMaia: React.FC<Props> = ({
 }: Props) => {
   const controller = useVsMaiaPlayController(id, playGameConfig)
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!controller.playerActive || controller.game.termination) return
+
+      switch (event.key) {
+        case 'ArrowRight':
+          event.preventDefault()
+          break
+        case 'ArrowLeft':
+          event.preventDefault()
+          break
+        default:
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [controller.playerActive, controller.game.termination])
+
   return (
     <PlayControllerContext.Provider value={controller}>
       <GameplayInterface>
         <PlayControls
+          game={controller.game}
           playerActive={controller.playerActive}
           gameOver={!!controller.game.termination}
           resign={

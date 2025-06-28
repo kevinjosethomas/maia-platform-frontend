@@ -11,7 +11,6 @@ import { AuthenticatedWrapper, UserProfile } from 'src/components'
 
 const ProfilePage: NextPage = () => {
   const router = useRouter()
-
   const [name, setName] = useState('')
   const [stats, setStats] = useState<PlayerStats>({
     regularRating: 0,
@@ -83,11 +82,19 @@ interface Props {
 const Profile: React.FC<Props> = (props: Props) => {
   const { isMobile } = useContext(WindowSizeContext)
 
-  const desktopLayout = () => (
-    <div className="flex h-full w-full flex-col items-start justify-center gap-6 px-[4%] md:py-[2%]">
+  const desktopLayout = (
+    <div className="mx-auto flex h-full w-[90%] flex-col items-start justify-center gap-6 md:py-[2%]">
       <div className="flex flex-row items-center gap-4">
         <div className="*:w-16 *:fill-primary">{UserIcon}</div>
-        <h1 className="text-3xl font-semibold">{props.name}</h1>
+        <div className="flex flex-col">
+          <h1 className="text-3xl font-semibold">{props.name}</h1>
+          <a
+            href={`https://lichess.org/@/${props.name}`}
+            className="text-sm text-primary"
+          >
+            View on Lichess
+          </a>
+        </div>
       </div>
       <div className="flex w-full flex-col items-start gap-6 md:flex-row">
         <UserProfile stats={props.stats} wide />
@@ -95,10 +102,10 @@ const Profile: React.FC<Props> = (props: Props) => {
     </div>
   )
 
-  const mobileLayout = () => (
-    <div className="mt-6 flex flex-col gap-3 px-[4%]">
-      <div className="flex flex-row items-center gap-3">
-        <div className="*:w-12 *:fill-primary">{UserIcon}</div>
+  const mobileLayout = (
+    <div className="mx-auto mt-6 flex w-[90%] flex-col gap-3">
+      <div className="flex flex-row items-center gap-2 md:gap-3">
+        <div className="*:w-8 *:fill-primary">{UserIcon}</div>
         <h1 className="text-3xl font-semibold">{props.name}</h1>
       </div>
       <div className="flex w-full flex-col gap-6">
@@ -107,7 +114,7 @@ const Profile: React.FC<Props> = (props: Props) => {
     </div>
   )
 
-  return <>{isMobile ? mobileLayout() : desktopLayout()}</>
+  return <>{isMobile ? mobileLayout : desktopLayout}</>
 }
 
 export default ProfilePage

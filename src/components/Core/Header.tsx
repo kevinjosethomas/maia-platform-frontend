@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/router'
 import { useCallback, useContext, useEffect, useState } from 'react'
 
-import { ThemeButton } from 'src/components'
+import { PlayType } from 'src/types'
 import { AuthContext, ModalContext, WindowSizeContext } from 'src/contexts'
 import { MenuIcon, UserIcon, DiscordIcon } from 'src/components/Icons/icons'
 
@@ -20,7 +20,7 @@ export const Header: React.FC = () => {
   const { setPlaySetupModalProps } = useContext(ModalContext)
 
   const startGame = useCallback(
-    (playType) => {
+    (playType: PlayType) => {
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur()
       }
@@ -56,7 +56,7 @@ export const Header: React.FC = () => {
         <p className="text-sm">{user?.displayName}</p>
         <p className="text-xs text-secondary">View Info</p>
       </div>
-      <div className="absolute bottom-[100%] left-0 z-10 hidden w-full overflow-hidden rounded bg-background-2 group-hover:flex group-hover:flex-col md:bottom-auto md:top-[100%]">
+      <div className="absolute bottom-[100%] left-0 z-50 hidden w-full overflow-hidden rounded bg-background-2 group-hover:flex group-hover:flex-col md:bottom-auto md:top-[100%]">
         <Link
           href="/profile"
           className="flex w-full items-center justify-start px-3 py-2 hover:bg-background-3"
@@ -186,7 +186,6 @@ export const Header: React.FC = () => {
         </div>
       </div>
       <div className="hidden flex-row items-center gap-3 md:flex">
-        <ThemeButton />
         <a
           target="_blank"
           rel="noreferrer"
@@ -294,7 +293,6 @@ export const Header: React.FC = () => {
             </a>
           </div>
           <div className="flex w-full flex-row items-center gap-3 px-4">
-            <ThemeButton />
             <a
               target="_blank"
               rel="noreferrer"
@@ -311,7 +309,7 @@ export const Header: React.FC = () => {
 
   return (
     <>
-      <div className="flex w-screen flex-row items-center justify-center pt-4">
+      <div className="flex w-screen flex-row items-center justify-center pb-1 pt-4 md:pb-0">
         {isMobile ? mobileLayout : desktopLayout}
       </div>
     </>

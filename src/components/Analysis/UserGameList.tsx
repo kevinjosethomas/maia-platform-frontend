@@ -13,17 +13,17 @@ interface Props {
   setSelected: (name: 'tournament' | 'play' | 'hand' | 'brain' | 'pgn') => void
   setCurrentIndex: Dispatch<SetStateAction<number>>
   setLoadingIndex: (index: number | null) => void
-  loadNewLichessGames: (
+  loadNewLichessGame: (
     id: string,
     pgn: string,
-    setCurrentMove: Dispatch<SetStateAction<number>>,
     currentMaiaModel: string,
+    setCurrentMove?: Dispatch<SetStateAction<number>>,
   ) => void
-  loadNewUserGames: (
+  loadNewUserGame: (
     id: string,
     type: 'play' | 'hand' | 'brain',
-    setCurrentMove: Dispatch<SetStateAction<number>>,
     currentMaiaModel: string,
+    setCurrentMove?: Dispatch<SetStateAction<number>>,
   ) => void
   currentMaiaModel: string
 }
@@ -38,8 +38,8 @@ export const UserGameList = ({
   lichessGames,
   setLoadingIndex,
   setCurrentIndex,
-  loadNewLichessGames,
-  loadNewUserGames,
+  loadNewLichessGame,
+  loadNewUserGame,
   currentMaiaModel,
 }: Props) => {
   return (
@@ -86,18 +86,18 @@ export const UserGameList = ({
               onClick={async () => {
                 setLoadingIndex(index)
                 if (game.type === 'pgn') {
-                  await loadNewLichessGames(
+                  await loadNewLichessGame(
                     game.id,
                     game.pgn as string,
-                    setCurrentIndex,
                     currentMaiaModel,
+                    setCurrentIndex,
                   )
                 } else {
-                  await loadNewUserGames(
+                  await loadNewUserGame(
                     game.id,
                     game.type as 'play' | 'hand' | 'brain',
-                    setCurrentIndex,
                     currentMaiaModel,
+                    setCurrentIndex,
                   )
                 }
                 setLoadingIndex(null)
@@ -132,7 +132,7 @@ function Header({
   setSelected,
 }: {
   label: string
-  name: 'play' | 'hand' | 'brain' | 'pgn'
+  name: 'tournament' | 'play' | 'hand' | 'brain' | 'pgn'
   selected: 'tournament' | 'play' | 'hand' | 'brain' | 'pgn'
   setSelected: (name: 'tournament' | 'play' | 'hand' | 'brain' | 'pgn') => void
 }) {

@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 
 import {
   BrainIcon,
@@ -15,7 +15,7 @@ const Leaderboard: React.FC = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [leaderboard, setLeaderboard] = useState<
     {
-      icon: JSX.Element
+      icon: React.JSX.Element
       ranking: { display_name: string; elo: number }[]
       name: 'Regular' | 'Train' | 'Bot/Not' | 'Hand' | 'Brain'
       id: 'regular' | 'train' | 'turing' | 'hand' | 'brain'
@@ -63,7 +63,7 @@ const Leaderboard: React.FC = () => {
   }, [fetchLeaderboard])
 
   return (
-    <div className="flex h-full w-full flex-col items-start justify-center gap-8 px-[4%] py-[2%]">
+    <div className="mx-auto flex h-full w-[90%] flex-col items-start justify-center gap-8 py-[2%]">
       <Head>
         <title>Leaderboard – Maia Chess</title>
         <meta

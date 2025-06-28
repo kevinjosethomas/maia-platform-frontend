@@ -8,14 +8,16 @@ import {
   useContext,
   useCallback,
   SetStateAction,
+  useRef,
 } from 'react'
 import Head from 'next/head'
-import { Chess } from 'chess.ts'
 import type { NextPage } from 'next'
 import { useRouter } from 'next/router'
 import type { Key } from 'chessground/types'
 import type { DrawShape } from 'chessground/draw'
-
+import { Chess, PieceSymbol } from 'chess.ts'
+import { AnimatePresence } from 'framer-motion'
+import toast from 'react-hot-toast'
 import {
   getTrainingGame,
   logPuzzleGuesses,
@@ -23,24 +25,34 @@ import {
 } from 'src/api'
 import {
   Loading,
-  MovePlot,
   GameInfo,
   Feedback,
   PuzzleLog,
-  GameBoard,
   StatsDisplay,
   BoardController,
   ContinueAgainstMaia,
   AuthenticatedWrapper,
-  VerticalEvaluationBar,
-  HorizontalEvaluationBar,
-  PositionEvaluationContainer,
+  GameBoard,
+  PromotionOverlay,
+  DownloadModelModal,
+  Highlight,
+  MoveMap,
+  BlunderMeter,
 } from 'src/components'
-import { useTrainingController } from 'src/hooks'
+import { useTrainingController } from 'src/hooks/useTrainingController'
+import { useAnalysisController } from 'src/hooks/useAnalysisController'
 import { AllStats, useStats } from 'src/hooks/useStats'
 import { TrainingGame, Status } from 'src/types/training'
+import { MaiaEvaluation, StockfishEvaluation } from 'src/types'
 import { ModalContext, WindowSizeContext } from 'src/contexts'
-import { GameControllerContext } from 'src/contexts/GameControllerContext/GameControllerContext'
+import { TrainingControllerContext } from 'src/contexts/TrainingControllerContext'
+import {
+  convertTrainingGameToAnalyzedGame,
+  getCurrentPlayer,
+  getAvailableMovesArray,
+  requiresPromotion,
+} from 'src/utils/train/utils'
+import { mockAnalysisData } from 'src/hooks/useAnalysisController/mockData'
 
 const statsLoader = async () => {
   const stats = await getTrainingPlayerStats()
@@ -83,8 +95,8 @@ const TrainPage: NextPage = () => {
 
     setStatus('default')
     setUserGuesses([])
-    setTrainingGames(trainingGames.concat([game]))
     setCurrentIndex(trainingGames.length)
+    setTrainingGames(trainingGames.concat([game]))
     setPreviousGameResults(previousGameResults.concat([{ ...game }]))
   }, [trainingGames, previousGameResults, router])
 
@@ -97,7 +109,13 @@ const TrainPage: NextPage = () => {
   }, [currentIndex])
 
   const logGuess = useCallback(
-    async (gameId, move, status, setStatus, rating) => {
+    async (
+      gameId: string,
+      move: [string, string] | null,
+      status: Status,
+      setStatus: Dispatch<SetStateAction<Status>>,
+      rating: number,
+    ) => {
       if (currentIndex != trainingGames.length - 1) {
         return // No logging for past puzzles
       }
@@ -206,7 +224,7 @@ interface Props {
   getNewGame: () => Promise<void>
   logGuess: (
     gameId: string,
-    move: string[] | null,
+    move: [string, string] | null,
     status: Status,
     setStatus: Dispatch<SetStateAction<Status>>,
     rating: number,
@@ -222,93 +240,372 @@ const Train: React.FC<Props> = ({
   getNewGame,
   logGuess,
 }: Props) => {
+  const controller = useTrainingController(trainingGame)
+
+  const analyzedGame = useMemo(() => {
+    return convertTrainingGameToAnalyzedGame(trainingGame)
+  }, [trainingGame])
+
+  const analysisController = useAnalysisController(
+    analyzedGame,
+    controller.orientation,
+  )
+
   const { width } = useContext(WindowSizeContext)
   const isMobile = useMemo(() => width > 0 && width <= 670, [width])
-  const [latestGuess, setLatestGuess] = useState<string | null>(null)
   const [movePlotHover, setMovePlotHover] = useState<DrawShape | null>(null)
+  const [hoverArrow, setHoverArrow] = useState<DrawShape | null>(null)
+  const [arrows, setArrows] = useState<DrawShape[]>([])
+  const analysisSyncedRef = useRef(false)
+  const toastId = useRef<string | null>(null)
+  const [promotionFromTo, setPromotionFromTo] = useState<
+    [string, string] | null
+  >(null)
 
-  const trainingController = useTrainingController(trainingGame)
+  const showAnalysis = status === 'correct' || status === 'forfeit'
 
-  const {
-    moves,
-    controller,
-    moveEvaluation,
-    setCurrentMove,
-    data,
-    move,
-    parseMove,
-    currentMove,
-    currentSquare,
-    setCurrentSquare,
-  } = trainingController
-
-  const turn =
-    new Chess(trainingGame.moves[trainingGame.targetIndex].board).turn() === 'w'
-      ? 'white'
-      : 'black'
+  const currentPlayer = useMemo(() => {
+    const currentNode = showAnalysis
+      ? analysisController.currentNode
+      : controller.currentNode
+    return getCurrentPlayer(currentNode)
+  }, [showAnalysis, analysisController.currentNode, controller.currentNode])
 
   useEffect(() => {
-    setMovePlotHover(null)
-  }, [trainingGame.id])
-
-  useEffect(() => {
-    if (status === 'incorrect' && !currentMove) {
+    if (controller.currentNode.fen === controller.puzzleStartingNode.fen) {
       setStatus('default')
     }
-  }, [currentMove, status])
+  }, [controller.currentNode])
 
-  const setAndSaveCurrentMove = useCallback(
-    (playedMove: null | [string, string]) => {
-      setCurrentMove(playedMove)
+  useEffect(() => {
+    if (showAnalysis && !analysisSyncedRef.current) {
+      // Set the analysis controller to the current training controller's node
+      // Only sync once when analysis mode is first enabled
+      analysisController.setCurrentNode(controller.currentNode)
+      analysisSyncedRef.current = true
+    } else if (!showAnalysis) {
+      // Reset sync flag when exiting analysis mode
+      analysisSyncedRef.current = false
+    }
+  }, [showAnalysis, analysisController, controller.currentNode])
 
-      if (playedMove != null && status !== 'correct' && status !== 'forfeit') {
-        setLatestGuess(parseMove(playedMove)?.san || null)
-        logGuess(
-          trainingGame.id,
-          playedMove,
-          status,
-          setStatus,
-          stats.rating ?? 0,
-        )
+  // Toast notifications for Maia model status
+  useEffect(() => {
+    return () => {
+      toast.dismiss()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (analysisController.maiaStatus === 'loading' && !toastId.current) {
+      toastId.current = toast.loading('Loading Maia Model...')
+    } else if (analysisController.maiaStatus === 'ready') {
+      if (toastId.current) {
+        toast.success('Loaded Maia! Analysis is ready', {
+          id: toastId.current,
+        })
+      } else {
+        toast.success('Loaded Maia! Analysis is ready')
+      }
+    }
+  }, [analysisController.maiaStatus])
+
+  const onSelectSquare = useCallback(
+    (square: Key) => {
+      if (!showAnalysis) {
+        controller.reset()
+        setStatus('default')
       }
     },
-    [setCurrentMove, logGuess, trainingGame.id, status, setStatus],
+    [controller, showAnalysis],
+  )
+
+  const onPlayerMakeMove = useCallback(
+    (playedMove: [string, string] | null) => {
+      if (!playedMove) return
+
+      if (showAnalysis) {
+        const availableMoves = getAvailableMovesArray(analysisController.moves)
+
+        if (requiresPromotion(playedMove, availableMoves)) {
+          setPromotionFromTo(playedMove)
+          return
+        }
+
+        // Single move or already has promotion
+        const moveUci = playedMove[0] + playedMove[1]
+
+        if (!analysisController.currentNode || !analyzedGame.tree) return
+
+        const chess = new Chess(analysisController.currentNode.fen)
+        const moveAttempt = chess.move({
+          from: moveUci.slice(0, 2),
+          to: moveUci.slice(2, 4),
+          promotion: moveUci[4] ? (moveUci[4] as PieceSymbol) : undefined,
+        })
+
+        if (moveAttempt) {
+          const newFen = chess.fen()
+          const moveString =
+            moveAttempt.from +
+            moveAttempt.to +
+            (moveAttempt.promotion ? moveAttempt.promotion : '')
+          const san = moveAttempt.san
+
+          if (analysisController.currentNode.mainChild?.move === moveString) {
+            analysisController.goToNode(
+              analysisController.currentNode.mainChild,
+            )
+          } else {
+            const newVariation = analyzedGame.tree.addVariation(
+              analysisController.currentNode,
+              newFen,
+              moveString,
+              san,
+              analysisController.currentMaiaModel,
+            )
+            analysisController.goToNode(newVariation)
+          }
+        }
+      } else {
+        // In puzzle mode, check for promotions in available moves
+        const availableMoves = getAvailableMovesArray(
+          controller.availableMovesMapped,
+        )
+
+        if (requiresPromotion(playedMove, availableMoves)) {
+          setPromotionFromTo(playedMove)
+          return
+        }
+
+        const moveUci = playedMove[0] + playedMove[1]
+        controller.onPlayerGuess(moveUci)
+
+        const currentStatus = status as Status
+        if (currentStatus !== 'correct' && currentStatus !== 'forfeit') {
+          logGuess(
+            trainingGame.id,
+            playedMove,
+            currentStatus,
+            setStatus,
+            stats.rating ?? 0,
+          )
+        }
+      }
+    },
+    [
+      controller,
+      logGuess,
+      trainingGame.id,
+      status,
+      setStatus,
+      showAnalysis,
+      analysisController,
+      analyzedGame,
+    ],
+  )
+
+  const onPlayerSelectPromotion = useCallback(
+    (piece: string) => {
+      if (!promotionFromTo) {
+        return
+      }
+      setPromotionFromTo(null)
+      const moveUci = promotionFromTo[0] + promotionFromTo[1] + piece
+
+      if (showAnalysis) {
+        // In analysis mode
+        if (!analysisController.currentNode || !analyzedGame.tree) return
+
+        const chess = new Chess(analysisController.currentNode.fen)
+        const moveAttempt = chess.move({
+          from: moveUci.slice(0, 2),
+          to: moveUci.slice(2, 4),
+          promotion: piece as PieceSymbol,
+        })
+
+        if (moveAttempt) {
+          const newFen = chess.fen()
+          const moveString = moveUci
+          const san = moveAttempt.san
+
+          if (analysisController.currentNode.mainChild?.move === moveString) {
+            analysisController.goToNode(
+              analysisController.currentNode.mainChild,
+            )
+          } else {
+            const newVariation = analyzedGame.tree.addVariation(
+              analysisController.currentNode,
+              newFen,
+              moveString,
+              san,
+              analysisController.currentMaiaModel,
+            )
+            analysisController.goToNode(newVariation)
+          }
+        }
+      } else {
+        // In puzzle mode
+        controller.onPlayerGuess(moveUci)
+
+        const currentStatus = status as Status
+        if (currentStatus !== 'correct' && currentStatus !== 'forfeit') {
+          logGuess(
+            trainingGame.id,
+            promotionFromTo,
+            currentStatus,
+            setStatus,
+            stats.rating ?? 0,
+          )
+        }
+      }
+    },
+    [
+      promotionFromTo,
+      setPromotionFromTo,
+      showAnalysis,
+      analysisController,
+      analyzedGame,
+      controller,
+      status,
+      logGuess,
+      trainingGame.id,
+      setStatus,
+      stats.rating,
+    ],
   )
 
   const setAndGiveUp = useCallback(() => {
     logGuess(trainingGame.id, null, 'forfeit', setStatus, stats.rating ?? 0)
     setStatus('forfeit')
-  }, [trainingGame.id, logGuess, setStatus])
-
-  const showArrow = (node: { data: { move: string } }) => {
-    const move = node.data.move
-    const orig = move.slice(0, 2)
-    const dest = move.slice(2, 4)
-    setMovePlotHover({
-      brush: 'green',
-      orig: orig as Key,
-      dest: dest as Key,
-    })
-  }
+  }, [trainingGame.id, logGuess, setStatus, stats.rating])
 
   const launchContinue = useCallback(() => {
-    const fen = trainingGame.moves[controller.currentIndex].board
-
-    const url = '/play' + '?fen=' + encodeURIComponent(fen)
-
+    const currentNode = showAnalysis
+      ? analysisController.currentNode
+      : controller.currentNode
+    const url = '/play' + '?fen=' + encodeURIComponent(currentNode.fen)
     window.open(url)
-  }, [trainingGame, controller])
+  }, [controller, analysisController, showAnalysis])
+
+  const hover = useCallback(
+    (move?: string) => {
+      if (move && showAnalysis) {
+        setHoverArrow({
+          orig: move.slice(0, 2) as Key,
+          dest: move.slice(2, 4) as Key,
+          brush: 'green',
+          modifiers: { lineWidth: 10 },
+        })
+      } else {
+        setHoverArrow(null)
+      }
+    },
+    [showAnalysis],
+  )
+
+  const makeMove = useCallback(
+    (move: string) => {
+      if (
+        !showAnalysis ||
+        !analysisController.currentNode ||
+        !analyzedGame.tree
+      )
+        return
+
+      const chess = new Chess(analysisController.currentNode.fen)
+      const moveAttempt = chess.move({
+        from: move.slice(0, 2),
+        to: move.slice(2, 4),
+        promotion: move[4] ? (move[4] as PieceSymbol) : undefined,
+      })
+
+      if (moveAttempt) {
+        const newFen = chess.fen()
+        const moveString =
+          moveAttempt.from +
+          moveAttempt.to +
+          (moveAttempt.promotion ? moveAttempt.promotion : '')
+        const san = moveAttempt.san
+
+        if (analysisController.currentNode.mainChild?.move === moveString) {
+          analysisController.goToNode(analysisController.currentNode.mainChild)
+        } else {
+          const newVariation = analyzedGame.tree.addVariation(
+            analysisController.currentNode,
+            newFen,
+            moveString,
+            san,
+            analysisController.currentMaiaModel,
+          )
+          analysisController.goToNode(newVariation)
+        }
+      }
+    },
+    [showAnalysis, analysisController, analyzedGame],
+  )
+
+  /**
+   * No-op handlers for blurred analysis components in puzzle mode
+   */
+  const mockHover = useCallback(() => {
+    // Intentionally empty - no interaction allowed in puzzle mode
+  }, [])
+  const mockMakeMove = useCallback(() => {
+    // Intentionally empty - no moves allowed in puzzle mode
+  }, [])
+  const mockSetHoverArrow = useCallback(() => {
+    // Intentionally empty - no hover arrows in puzzle mode
+  }, [])
+
+  useEffect(() => {
+    if (!showAnalysis || !analysisController.moveEvaluation) {
+      setArrows([])
+      return
+    }
+
+    const arr = []
+
+    if (analysisController.moveEvaluation?.maia) {
+      const maia = Object.entries(
+        analysisController.moveEvaluation?.maia?.policy,
+      )[0]
+      if (maia) {
+        arr.push({
+          brush: 'red',
+          orig: maia[0].slice(0, 2) as Key,
+          dest: maia[0].slice(2, 4) as Key,
+        } as DrawShape)
+      }
+    }
+
+    if (analysisController.moveEvaluation?.stockfish) {
+      const stockfish = Object.entries(
+        analysisController.moveEvaluation?.stockfish.cp_vec,
+      )[0]
+      if (stockfish) {
+        arr.push({
+          brush: 'blue',
+          orig: stockfish[0].slice(0, 2) as Key,
+          dest: stockfish[0].slice(2, 4) as Key,
+          modifiers: { lineWidth: 8 },
+        })
+      }
+    }
+
+    setArrows(arr)
+  }, [
+    showAnalysis,
+    analysisController.moveEvaluation,
+    analysisController.currentNode,
+    analysisController.orientation,
+  ])
 
   const desktopLayout = (
     <>
-      <div className="flex h-full flex-1 flex-col justify-center gap-1">
-        <div className="mt-2 flex w-full flex-row items-center justify-center gap-1">
-          <div
-            style={{
-              maxWidth: 'min(20vw, 100vw - 75vh)',
-            }}
-            className="flex h-[75vh] w-[40vh] flex-col gap-1"
-          >
+      <div className="flex h-full w-full flex-col items-center py-4 md:py-10">
+        <div className="flex h-full w-[90%] flex-row gap-4">
+          <div className="flex h-[85vh] w-72 min-w-60 max-w-72 flex-col gap-2 overflow-hidden 2xl:min-w-72">
             <GameInfo title="Training" icon="target" type="train">
               <p className="text-secondary">
                 Puzzle{' '}
@@ -329,87 +626,201 @@ const Train: React.FC<Props> = ({
             {gamesController}
             <StatsDisplay stats={stats} />
           </div>
-          <div className="relative flex aspect-square w-full max-w-[75vh]">
-            <GameBoard
-              move={move}
-              game={trainingGame}
-              moves={moves}
-              setCurrentMove={setAndSaveCurrentMove}
-              setCurrentSquare={setCurrentSquare}
-              shapes={movePlotHover ? [movePlotHover] : undefined}
-            />
-          </div>
-          <div>
-            <VerticalEvaluationBar
-              value={moveEvaluation?.maia}
-              label="Maia White Win %"
-            />
-          </div>
-          <div
-            style={{
-              maxWidth: 'min(20vw, 100vw - 75vh)',
-            }}
-            className="flex h-[75vh] w-[40vh] flex-col gap-1"
-          >
-            <div className="flex">
-              <div
-                style={{
-                  maxHeight: 'min(20vw, 100vw - 75vh)',
-                  maxWidth: 'min(20vw, 100vw - 75vh)',
-                }}
-                className="flex h-[40vh] w-[40vh] [&>div]:h-[inherit] [&>div]:max-h-[inherit] [&>div]:max-w-[inherit]"
-              >
-                <MovePlot
-                  data={data}
-                  onMove={setCurrentMove}
-                  currentMove={currentMove}
-                  currentSquare={currentSquare}
-                  disabled={status !== 'correct' && status !== 'forfeit'}
-                  onMouseEnter={showArrow}
-                  onMouseLeave={() => setMovePlotHover(null)}
-                />
-              </div>
-              <div
-                style={{
-                  background:
-                    'linear-gradient(0deg, rgb(36, 36, 36) 0%, rgb(255, 137, 70) 100%)',
-                }}
-                className="-mr-1 h-full w-1"
+
+          <div className="flex h-[85vh] w-[45vh] flex-col gap-2 2xl:w-[55vh]">
+            <div className="relative flex aspect-square w-[45vh] 2xl:w-[55vh]">
+              <GameBoard
+                game={trainingGame}
+                currentNode={
+                  showAnalysis
+                    ? analysisController.currentNode
+                    : controller.currentNode
+                }
+                orientation={
+                  showAnalysis
+                    ? analysisController.orientation
+                    : controller.orientation
+                }
+                onPlayerMakeMove={onPlayerMakeMove}
+                availableMoves={
+                  showAnalysis
+                    ? analysisController.moves
+                    : controller.availableMovesMapped
+                }
+                shapes={hoverArrow ? [...arrows, hoverArrow] : [...arrows]}
+                onSelectSquare={onSelectSquare}
+                goToNode={
+                  showAnalysis ? analysisController.goToNode : undefined
+                }
+                gameTree={showAnalysis ? analyzedGame.tree : undefined}
               />
+              {promotionFromTo ? (
+                <PromotionOverlay
+                  player={currentPlayer}
+                  file={promotionFromTo[1].slice(0, 1)}
+                  onPlayerSelectPromotion={onPlayerSelectPromotion}
+                />
+              ) : null}
             </div>
-            <div
-              style={{
-                background:
-                  'linear-gradient(90deg, rgb(36, 36, 36) 0%, rgb(83, 167, 162) 100%)',
-              }}
-              className="-mt-1 h-1 w-full"
+            <BoardController
+              orientation={
+                showAnalysis
+                  ? analysisController.orientation
+                  : controller.orientation
+              }
+              setOrientation={
+                showAnalysis
+                  ? analysisController.setOrientation
+                  : controller.setOrientation
+              }
+              currentNode={
+                showAnalysis
+                  ? analysisController.currentNode
+                  : controller.currentNode
+              }
+              plyCount={
+                showAnalysis ? analysisController.plyCount : controller.plyCount
+              }
+              goToNode={
+                showAnalysis ? analysisController.goToNode : controller.goToNode
+              }
+              goToNextNode={
+                showAnalysis
+                  ? analysisController.goToNextNode
+                  : controller.goToNextNode
+              }
+              goToPreviousNode={
+                showAnalysis
+                  ? analysisController.goToPreviousNode
+                  : controller.goToPreviousNode
+              }
+              goToRootNode={
+                showAnalysis
+                  ? analysisController.goToRootNode
+                  : controller.goToRootNode
+              }
+              gameTree={
+                showAnalysis ? analysisController.gameTree : controller.gameTree
+              }
             />
-            <div className="flex-none">
-              <PositionEvaluationContainer moveEvaluation={moveEvaluation} />
-            </div>
-            <div className="flex flex-1 flex-col items-stretch">
+            <div className="flex w-full flex-1">
               <Feedback
                 status={status}
                 game={trainingGame}
                 setStatus={setStatus}
-                latestGuess={latestGuess}
                 setAndGiveUp={setAndGiveUp}
-                trainingController={trainingController}
+                controller={controller}
                 getNewGame={getNewGame}
               />
             </div>
-            <div className="flex-none">
-              <BoardController setCurrentMove={setCurrentMove} />
+          </div>
+          <div
+            id="analysis"
+            className="flex h-[calc(55vh+4.5rem)] w-full flex-col gap-2"
+          >
+            <div className="relative">
+              <div className="flex h-[calc((55vh+4.5rem)/2)]">
+                <Highlight
+                  hover={showAnalysis ? hover : mockHover}
+                  makeMove={showAnalysis ? makeMove : mockMakeMove}
+                  currentMaiaModel={
+                    showAnalysis
+                      ? analysisController.currentMaiaModel
+                      : 'maia_kdd_1500'
+                  }
+                  recommendations={
+                    showAnalysis
+                      ? analysisController.moveRecommendations
+                      : mockAnalysisData.recommendations
+                  }
+                  moveEvaluation={
+                    showAnalysis
+                      ? (analysisController.moveEvaluation as {
+                          maia?: MaiaEvaluation
+                          stockfish?: StockfishEvaluation
+                        })
+                      : mockAnalysisData.moveEvaluation
+                  }
+                  movesByRating={
+                    showAnalysis
+                      ? analysisController.movesByRating
+                      : mockAnalysisData.movesByRating
+                  }
+                  colorSanMapping={
+                    showAnalysis
+                      ? analysisController.colorSanMapping
+                      : mockAnalysisData.colorSanMapping
+                  }
+                  boardDescription={
+                    showAnalysis
+                      ? analysisController.boardDescription
+                      : 'This position offers multiple strategic options. Consider central control and piece development.'
+                  }
+                />
+              </div>
+              {!showAnalysis && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded bg-background-1/80 backdrop-blur-sm">
+                  <div className="rounded bg-background-2/90 p-4 text-center shadow-lg">
+                    <span className="material-symbols-outlined mb-2 text-3xl text-human-3">
+                      lock
+                    </span>
+                    <p className="font-medium text-primary">Analysis Locked</p>
+                    <p className="text-sm text-secondary">
+                      Complete the puzzle to unlock analysis
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="relative">
+              <div className="flex h-[calc((55vh+4.5rem)/2)] flex-row gap-2">
+                <div className="flex h-full w-full flex-col">
+                  <MoveMap
+                    moveMap={
+                      showAnalysis
+                        ? analysisController.moveMap
+                        : mockAnalysisData.moveMap
+                    }
+                    colorSanMapping={
+                      showAnalysis
+                        ? analysisController.colorSanMapping
+                        : mockAnalysisData.colorSanMapping
+                    }
+                    setHoverArrow={
+                      showAnalysis ? setHoverArrow : mockSetHoverArrow
+                    }
+                  />
+                </div>
+                <BlunderMeter
+                  hover={showAnalysis ? hover : mockHover}
+                  makeMove={showAnalysis ? makeMove : mockMakeMove}
+                  data={
+                    showAnalysis
+                      ? analysisController.blunderMeter
+                      : mockAnalysisData.blunderMeter
+                  }
+                  colorSanMapping={
+                    showAnalysis
+                      ? analysisController.colorSanMapping
+                      : mockAnalysisData.colorSanMapping
+                  }
+                />
+              </div>
+              {!showAnalysis && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded bg-background-1/80 backdrop-blur-sm">
+                  <div className="rounded bg-background-2/90 p-4 text-center shadow-lg">
+                    <span className="material-symbols-outlined mb-2 text-3xl text-human-3">
+                      lock
+                    </span>
+                    <p className="font-medium text-primary">Analysis Locked</p>
+                    <p className="text-sm text-secondary">
+                      Complete the puzzle to unlock analysis
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-        <div className="mr-8 flex items-center justify-center">
-          <HorizontalEvaluationBar
-            min={0}
-            max={1}
-            value={moveEvaluation?.stockfish}
-            label="Stockfish Evaluation"
-          />
         </div>
       </div>
     </>
@@ -440,60 +851,209 @@ const Train: React.FC<Props> = ({
           <div className="relative flex aspect-square h-[100vw] w-screen">
             <GameBoard
               game={trainingGame}
-              moves={moves}
-              setCurrentMove={setAndSaveCurrentMove}
-              setCurrentSquare={setCurrentSquare}
-              move={move}
-              shapes={movePlotHover ? [movePlotHover] : undefined}
+              currentNode={
+                showAnalysis
+                  ? analysisController.currentNode
+                  : controller.currentNode
+              }
+              orientation={
+                showAnalysis
+                  ? analysisController.orientation
+                  : controller.orientation
+              }
+              availableMoves={
+                showAnalysis
+                  ? analysisController.moves
+                  : controller.availableMovesMapped
+              }
+              onPlayerMakeMove={onPlayerMakeMove}
+              shapes={hoverArrow ? [...arrows, hoverArrow] : [...arrows]}
+              onSelectSquare={onSelectSquare}
+              goToNode={showAnalysis ? analysisController.goToNode : undefined}
+              gameTree={showAnalysis ? analyzedGame.tree : undefined}
             />
+            {promotionFromTo ? (
+              <PromotionOverlay
+                player={currentPlayer}
+                file={promotionFromTo[1].slice(0, 1)}
+                onPlayerSelectPromotion={onPlayerSelectPromotion}
+              />
+            ) : null}
           </div>
           <div className="flex h-auto w-full flex-col gap-1">
             <div className="flex-none">
-              <BoardController setCurrentMove={setCurrentMove} />
+              <BoardController
+                orientation={
+                  showAnalysis
+                    ? analysisController.orientation
+                    : controller.orientation
+                }
+                setOrientation={
+                  showAnalysis
+                    ? analysisController.setOrientation
+                    : controller.setOrientation
+                }
+                currentNode={
+                  showAnalysis
+                    ? analysisController.currentNode
+                    : controller.currentNode
+                }
+                plyCount={
+                  showAnalysis
+                    ? analysisController.plyCount
+                    : controller.plyCount
+                }
+                goToNode={
+                  showAnalysis
+                    ? analysisController.goToNode
+                    : controller.goToNode
+                }
+                goToNextNode={
+                  showAnalysis
+                    ? analysisController.goToNextNode
+                    : controller.goToNextNode
+                }
+                goToPreviousNode={
+                  showAnalysis
+                    ? analysisController.goToPreviousNode
+                    : controller.goToPreviousNode
+                }
+                goToRootNode={
+                  showAnalysis
+                    ? analysisController.goToRootNode
+                    : controller.goToRootNode
+                }
+                gameTree={
+                  showAnalysis
+                    ? analysisController.gameTree
+                    : controller.gameTree
+                }
+              />
             </div>
-            <div className="flex flex-1 flex-col items-stretch">
+            <StatsDisplay stats={stats} />
+            <ContinueAgainstMaia launchContinue={launchContinue} />
+            <div className="flex w-full flex-col gap-1 overflow-hidden">
+              <div className="relative">
+                <BlunderMeter
+                  hover={showAnalysis ? hover : mockHover}
+                  makeMove={showAnalysis ? makeMove : mockMakeMove}
+                  data={
+                    showAnalysis
+                      ? analysisController.blunderMeter
+                      : mockAnalysisData.blunderMeter
+                  }
+                  colorSanMapping={
+                    showAnalysis
+                      ? analysisController.colorSanMapping
+                      : mockAnalysisData.colorSanMapping
+                  }
+                />
+                {!showAnalysis && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-background-1/80 backdrop-blur-sm">
+                    <div className="rounded bg-background-2/90 p-2 text-center shadow-lg">
+                      <span className="material-symbols-outlined mb-1 text-xl text-human-3">
+                        lock
+                      </span>
+                      <p className="text-xs font-medium text-primary">
+                        Analysis Locked
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <Highlight
+                  hover={showAnalysis ? hover : mockHover}
+                  makeMove={showAnalysis ? makeMove : mockMakeMove}
+                  currentMaiaModel={
+                    showAnalysis
+                      ? analysisController.currentMaiaModel
+                      : 'maia_kdd_1500'
+                  }
+                  recommendations={
+                    showAnalysis
+                      ? analysisController.moveRecommendations
+                      : mockAnalysisData.recommendations
+                  }
+                  moveEvaluation={
+                    showAnalysis
+                      ? (analysisController.moveEvaluation as {
+                          maia?: MaiaEvaluation
+                          stockfish?: StockfishEvaluation
+                        })
+                      : mockAnalysisData.moveEvaluation
+                  }
+                  movesByRating={
+                    showAnalysis
+                      ? analysisController.movesByRating
+                      : mockAnalysisData.movesByRating
+                  }
+                  colorSanMapping={
+                    showAnalysis
+                      ? analysisController.colorSanMapping
+                      : mockAnalysisData.colorSanMapping
+                  }
+                  boardDescription={
+                    showAnalysis
+                      ? analysisController.boardDescription
+                      : 'This position offers multiple strategic options. Consider central control and piece development.'
+                  }
+                />
+                {!showAnalysis && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-background-1/80 backdrop-blur-sm">
+                    <div className="rounded bg-background-2/90 p-2 text-center shadow-lg">
+                      <span className="material-symbols-outlined mb-1 text-xl text-human-3">
+                        lock
+                      </span>
+                      <p className="text-xs font-medium text-primary">
+                        Analysis Locked
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <MoveMap
+                  moveMap={
+                    showAnalysis
+                      ? analysisController.moveMap
+                      : mockAnalysisData.moveMap
+                  }
+                  colorSanMapping={
+                    showAnalysis
+                      ? analysisController.colorSanMapping
+                      : mockAnalysisData.colorSanMapping
+                  }
+                  setHoverArrow={
+                    showAnalysis ? setHoverArrow : mockSetHoverArrow
+                  }
+                />
+                {!showAnalysis && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-background-1/80 backdrop-blur-sm">
+                    <div className="rounded bg-background-2/90 p-2 text-center shadow-lg">
+                      <span className="material-symbols-outlined mb-1 text-xl text-human-3">
+                        lock
+                      </span>
+                      <p className="text-xs font-medium text-primary">
+                        Analysis Locked
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex w-full">
               <Feedback
                 status={status}
                 game={trainingGame}
                 setStatus={setStatus}
-                latestGuess={latestGuess}
-                trainingController={trainingController}
+                controller={controller}
                 setAndGiveUp={setAndGiveUp}
                 getNewGame={getNewGame}
               />
             </div>
-            <StatsDisplay stats={stats} />
-            <div className="flex">
-              <div className="flex h-[20vh] w-screen flex-none [&>div]:h-[inherit] [&>div]:max-h-[inherit] [&>div]:max-w-[inherit]">
-                <MovePlot
-                  data={data}
-                  onMove={setCurrentMove}
-                  currentMove={currentMove}
-                  currentSquare={currentSquare}
-                  disabled={status !== 'correct' && status !== 'forfeit'}
-                  onMouseEnter={showArrow}
-                  onMouseLeave={() => setMovePlotHover(null)}
-                />
-              </div>
-              <div
-                style={{
-                  background:
-                    'linear-gradient(0deg, rgb(36, 36, 36) 0%, rgb(255, 137, 70) 100%)',
-                }}
-                className="-mt-1 h-full w-1"
-              />
-            </div>
-            <div
-              style={{
-                background:
-                  'linear-gradient(90deg, rgb(36, 36, 36) 0%, rgb(83, 167, 162) 100%)',
-              }}
-              className="-mt-1 h-1 w-full"
-            />
-            <div className="w-full flex-none">
-              <PositionEvaluationContainer moveEvaluation={moveEvaluation} />
-            </div>
-            <ContinueAgainstMaia launchContinue={launchContinue} />
           </div>
         </div>
       </div>
@@ -509,14 +1069,18 @@ const Train: React.FC<Props> = ({
           content="Collection of chess training and analysis tools centered around Maia."
         />
       </Head>
-      <GameControllerContext.Provider
-        value={{
-          ...controller,
-          orientation: turn,
-        }}
-      >
+      <AnimatePresence>
+        {analysisController.maiaStatus === 'no-cache' ||
+        analysisController.maiaStatus === 'downloading' ? (
+          <DownloadModelModal
+            progress={analysisController.maiaProgress}
+            download={analysisController.downloadMaia}
+          />
+        ) : null}
+      </AnimatePresence>
+      <TrainingControllerContext.Provider value={controller}>
         {trainingGame && (isMobile ? mobileLayout : desktopLayout)}
-      </GameControllerContext.Provider>
+      </TrainingControllerContext.Provider>
     </>
   )
 }
