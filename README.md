@@ -1,4 +1,4 @@
-# maia platform  
+# maia platform   
 
 This is the code that powers the[ Maia Chess platform](https://www.maiachess.com).
    
