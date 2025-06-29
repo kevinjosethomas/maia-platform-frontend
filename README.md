@@ -12,7 +12,7 @@
   </p>
 </p>
 
-This repository contains the source code for the [Maia Chess Platform](https://www.maiachess.com), a modern web application designed for chess training and analysis. It leverages the Maia chess engine, developed by the University of Toronto's Computational Social Science Lab, to provide human-like move predictions and insights. The platform is built with Next.js, TypeScript, and Tailwind CSS. Join our [Discord server](https://discord.gg/hHb6gqFpxZ) for discussions, questions, and to connect with the community.
+This repository contains the source code for the [Maia Chess Platform](https://www.maiachess.com), a modern web application designed for chess training and analysis. It leverages the Maia chess engine, developed by the University of Toronto's Computational Social Science Lab, to provide human-like move predictions and insights. The platform is built with Next.js, TypeScript, and Tailwind CSS. Join our [Discord server](https://discord.gg/hHb6gqFpxZ) for discussions, questions, and to connect with the community. 
 
 ## Getting Started
 
