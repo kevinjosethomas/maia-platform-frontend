@@ -26,7 +26,7 @@ export const generateColorSanMapping = (
   if (!stockfish) return mapping
 
   moves.forEach((m) => {
-    const moveKey = `${m.from}${m.to}`
+    const moveKey = `${m.from}${m.to}${m.promotion || ''}`
     // Use winrate_loss_vec if available, otherwise fall back to cp_relative_vec
     const winrateLoss = stockfish?.winrate_loss_vec?.[moveKey]
     const relativeEval = stockfish?.cp_relative_vec[moveKey]
@@ -226,31 +226,41 @@ export const calculateBlunderMeter = (
   }))
 
   const totalFloored = flooredPercentages.reduce((sum, p) => sum + p.floored, 0)
-  const remainingPoints = 100 - totalFloored
+  const remainingPoints = Math.max(0, Math.min(100 - totalFloored, 100))
 
   const sortedByFractional = [...flooredPercentages].sort(
     (a, b) => b.fractional - a.fractional,
   )
 
-  for (let i = 0; i < remainingPoints; i++) {
-    sortedByFractional[i].floored += 1
+  for (let i = 0; i < remainingPoints && i < sortedByFractional.length; i++) {
+    if (sortedByFractional[i]) {
+      sortedByFractional[i].floored += 1
+    }
   }
 
-  const adjustedGood = sortedByFractional.find((p) => p.key === 'good')
-  const adjustedOk = sortedByFractional.find((p) => p.key === 'ok')
-  const adjustedBlunder = sortedByFractional.find((p) => p.key === 'blunder')
+  const adjustedGood = sortedByFractional.find(
+    (p) => p && p.key === 'good',
+  ) || {
+    floored: 0,
+  }
+  const adjustedOk = sortedByFractional.find((p) => p && p.key === 'ok') || {
+    floored: 0,
+  }
+  const adjustedBlunder = sortedByFractional.find(
+    (p) => p && p.key === 'blunder',
+  ) || { floored: 0 }
 
   return {
     blunderMoves: {
-      probability: adjustedBlunder?.floored || 0,
+      probability: adjustedBlunder.floored,
       moves: blunderMoveChanceInfo,
     },
     okMoves: {
-      probability: adjustedOk?.floored || 0,
+      probability: adjustedOk.floored,
       moves: okMoveChanceInfo,
     },
     goodMoves: {
-      probability: adjustedGood?.floored || 0,
+      probability: adjustedGood.floored,
       moves: goodMoveChanceInfo,
     },
   }

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { MovesByRating } from './MovesByRating'
 import { MoveTooltip } from './MoveTooltip'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MaiaEvaluation, StockfishEvaluation, ColorSanMapping } from 'src/types'
@@ -23,14 +22,12 @@ interface Props {
   }
   hover: (move?: string) => void
   makeMove: (move: string) => void
-  movesByRating: { [key: string]: number }[] | undefined
   boardDescription: string
 }
 
 export const Highlight: React.FC<Props> = ({
   hover,
   makeMove,
-  movesByRating,
   moveEvaluation,
   colorSanMapping,
   recommendations,
@@ -115,121 +112,113 @@ export const Highlight: React.FC<Props> = ({
   }, [boardDescription])
 
   return (
-    <div className="flex h-full w-full flex-col items-start gap-1 overflow-hidden md:flex-row md:gap-0 md:rounded md:border-[0.5px] md:border-white/40">
-      <div className="flex h-full w-full flex-col border-white/40 bg-background-1 md:w-auto md:min-w-[40%] md:max-w-[40%] md:border-r-[0.5px]">
-        <div className="grid grid-cols-2">
-          <div className="flex flex-col items-center justify-center gap-1 bg-human-3/5 py-2 md:py-3">
-            <p className="text-center text-xs text-human-2 md:text-sm">
-              Maia {currentMaiaModel.slice(-4)}
-              <br />
-              White Win %
-            </p>
-            <p className="text-xl font-bold text-human-1 md:text-2xl">
-              {moveEvaluation?.maia
-                ? `${Math.round(moveEvaluation.maia?.value * 1000) / 10}%`
-                : '...'}
-            </p>
-          </div>
-          <div className="flex flex-col items-center justify-center gap-1 bg-engine-3/5 py-2 md:py-3">
-            <p className="text-center text-xs text-engine-2 md:text-sm">
-              SF Eval
-              <br />
-              {moveEvaluation?.stockfish?.depth
-                ? ` (Depth ${moveEvaluation.stockfish?.depth})`
-                : ''}
-            </p>
-            <p className="text-xl font-bold text-engine-1 md:text-2xl">
-              {moveEvaluation?.stockfish
-                ? `${moveEvaluation.stockfish.model_optimal_cp > 0 ? '+' : ''}${moveEvaluation.stockfish.model_optimal_cp / 100}`
-                : '...'}
-            </p>
-          </div>
+    <div className="flex h-full w-full flex-col border-white/40 bg-background-1">
+      <div className="grid grid-cols-2">
+        <div className="flex flex-col items-center justify-center gap-0.5 bg-human-3/5 py-1.5 xl:gap-1 xl:py-2 2xl:py-3">
+          <p className="text-center text-[10px] text-human-2 xl:text-xs 2xl:text-sm">
+            Maia {currentMaiaModel.slice(-4)}
+            <br />
+            White Win %
+          </p>
+          <p className="text-lg font-bold text-human-1 xl:text-xl 2xl:text-2xl">
+            {moveEvaluation?.maia
+              ? `${Math.round(moveEvaluation.maia?.value * 1000) / 10}%`
+              : '...'}
+          </p>
         </div>
-        <div className="grid grid-cols-2">
-          <div className="grid grid-rows-2 items-center justify-center p-3">
-            {recommendations.maia?.slice(0, 4).map(({ move, prob }, index) => {
+        <div className="flex flex-col items-center justify-center gap-0.5 bg-engine-3/5 py-1.5 xl:py-2 2xl:gap-1 2xl:py-3">
+          <p className="text-center text-[10px] text-engine-2 xl:text-xs 2xl:text-sm">
+            SF Eval
+            <br />
+            {moveEvaluation?.stockfish?.depth
+              ? ` (Depth ${moveEvaluation.stockfish?.depth})`
+              : ''}
+          </p>
+          <p className="text-lg font-bold text-engine-1 xl:text-xl 2xl:text-2xl">
+            {moveEvaluation?.stockfish
+              ? `${moveEvaluation.stockfish.model_optimal_cp > 0 ? '+' : ''}${moveEvaluation.stockfish.model_optimal_cp / 100}`
+              : '...'}
+          </p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2">
+        <div className="grid grid-rows-2 items-center justify-center p-1.5 xl:p-2 2xl:p-3">
+          {recommendations.maia?.slice(0, 4).map(({ move, prob }, index) => {
+            return (
+              <button
+                key={index}
+                className="grid cursor-pointer grid-cols-2 gap-1.5 hover:underline xl:gap-2 2xl:gap-3"
+                style={{
+                  color: colorSanMapping[move]?.color ?? '#fff',
+                }}
+                onMouseLeave={handleMouseLeave}
+                onMouseEnter={(e) => handleMouseEnter(move, 'maia', e, prob)}
+                onClick={() => makeMove(move)}
+              >
+                <p className="text-right font-mono text-[10px] xl:text-xs 2xl:text-sm">
+                  {(Math.round(prob * 1000) / 10).toFixed(1)}%
+                </p>
+                <p className="text-left font-mono text-[10px] xl:text-xs 2xl:text-sm">
+                  {colorSanMapping[move]?.san ?? move}
+                </p>
+              </button>
+            )
+          })}
+        </div>
+        <div className="grid grid-rows-2 flex-col items-center justify-center p-1.5 xl:p-2 2xl:p-3">
+          {recommendations.stockfish
+            ?.slice(0, 4)
+            .map(({ move, cp, winrate, winrate_loss }, index) => {
               return (
                 <button
                   key={index}
-                  className="grid cursor-pointer grid-cols-2 gap-3 hover:underline"
+                  className="grid cursor-pointer grid-cols-2 gap-1.5 hover:underline xl:gap-2 2xl:gap-3"
                   style={{
                     color: colorSanMapping[move]?.color ?? '#fff',
                   }}
                   onMouseLeave={handleMouseLeave}
-                  onMouseEnter={(e) => handleMouseEnter(move, 'maia', e, prob)}
+                  onMouseEnter={(e) =>
+                    handleMouseEnter(
+                      move,
+                      'stockfish',
+                      e,
+                      undefined,
+                      cp,
+                      winrate,
+                      winrate_loss,
+                    )
+                  }
                   onClick={() => makeMove(move)}
                 >
-                  <p className="text-right font-mono text-xs md:text-sm">
-                    {(Math.round(prob * 1000) / 10).toFixed(1)}%
+                  <p className="w-[32px] text-right font-mono text-[10px] xl:w-[36px] xl:text-xs 2xl:w-[42px] 2xl:text-sm">
+                    {cp > 0 ? '+' : null}
+                    {`${(cp / 100).toFixed(2)}`}
                   </p>
-                  <p className="text-left font-mono text-xs md:text-sm">
+                  <p className="text-left font-mono text-[10px] xl:text-xs 2xl:text-sm">
                     {colorSanMapping[move]?.san ?? move}
                   </p>
                 </button>
               )
             })}
-          </div>
-          <div className="grid grid-rows-2 flex-col items-center justify-center p-3">
-            {recommendations.stockfish
-              ?.slice(0, 4)
-              .map(({ move, cp, winrate, winrate_loss }, index) => {
-                return (
-                  <button
-                    key={index}
-                    className="grid cursor-pointer grid-cols-2 gap-3 hover:underline"
-                    style={{
-                      color: colorSanMapping[move]?.color ?? '#fff',
-                    }}
-                    onMouseLeave={handleMouseLeave}
-                    onMouseEnter={(e) =>
-                      handleMouseEnter(
-                        move,
-                        'stockfish',
-                        e,
-                        undefined,
-                        cp,
-                        winrate,
-                        winrate_loss,
-                      )
-                    }
-                    onClick={() => makeMove(move)}
-                  >
-                    <p className="w-[42px] text-right font-mono text-xs md:text-sm">
-                      {cp > 0 ? '+' : null}
-                      {`${(cp / 100).toFixed(2)}`}
-                    </p>
-                    <p className="text-left font-mono text-xs md:text-sm">
-                      {colorSanMapping[move]?.san ?? move}
-                    </p>
-                  </button>
-                )
-              })}
-          </div>
-        </div>
-        <div className="flex flex-col items-start justify-start gap-1 bg-background-1/80 px-3 pb-3 text-sm md:py-1.5">
-          <AnimatePresence mode="wait">
-            {boardDescription ? (
-              <motion.div
-                key={animationKey}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.1 }}
-                className="w-full"
-              >
-                <p className="w-full whitespace-normal break-words text-xs text-secondary">
-                  {boardDescription}
-                </p>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
         </div>
       </div>
-      <div className="flex h-full w-full flex-col bg-background-1">
-        <MovesByRating
-          moves={movesByRating}
-          colorSanMapping={colorSanMapping}
-        />
+      <div className="flex flex-col items-start justify-start gap-0.5 bg-background-1/80 px-2 pb-2 text-sm xl:gap-1 xl:px-3 xl:pb-3 2xl:py-1.5">
+        <AnimatePresence mode="wait">
+          {boardDescription ? (
+            <motion.div
+              key={animationKey}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.1 }}
+              className="w-full"
+            >
+              <p className="w-full whitespace-normal break-words text-[10px] leading-tight text-secondary xl:text-xs xl:leading-tight">
+                {boardDescription}
+              </p>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
 
       {/* Tooltip */}
