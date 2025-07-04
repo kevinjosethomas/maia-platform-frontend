@@ -170,12 +170,19 @@ export const TrainSection = ({ id }: TrainSectionProps) => {
 
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
 
+  // Force re-mounts of the board to ensure Chessground recalculates its
+  // dimensions correctly on small screens after layout shifts.
+  const [renderKey, setRenderKey] = useState(0)
+
   useEffect(() => {
     const handleResize = () => {
       setWindowSize({
         width: window.innerWidth,
         height: window.innerHeight,
       })
+
+      // Re-render the board on window resize so it always fits its container
+      setRenderKey((prev) => prev + 1)
     }
 
     handleResize()
@@ -195,8 +202,23 @@ export const TrainSection = ({ id }: TrainSectionProps) => {
       setCurrentPuzzle((prev) => (prev + 1) % PUZZLES.length)
     }, 8000)
 
+    // Allow the layout to settle and then re-mount the board a few times so
+    // Chessground can pick up the final container size, similar to the
+    // behaviour in AnalysisSection.
+    const timeoutIds: NodeJS.Timeout[] = []
+    const delays = [100, 300, 500]
+    delays.forEach((delay) => {
+      timeoutIds.push(
+        setTimeout(() => {
+          setRenderKey((prev) => prev + 1)
+        }, delay),
+      )
+    })
+
     return () => {
       clearInterval(positionInterval)
+
+      timeoutIds.forEach((id) => clearTimeout(id))
     }
   }, [inView])
 
@@ -215,7 +237,7 @@ export const TrainSection = ({ id }: TrainSectionProps) => {
 
   const puzzle = PUZZLES[currentPuzzle]
 
-  const stableKey = `board-${currentPuzzle}-${windowSize.width}-${windowSize.height}`
+  const stableKey = `board-${currentPuzzle}-${renderKey}-${windowSize.width}-${windowSize.height}`
 
   return (
     <section
@@ -288,69 +310,71 @@ export const TrainSection = ({ id }: TrainSectionProps) => {
               <p className="text-sm text-secondary">{puzzle.description}</p>
             </div>
             <div className="flex flex-col gap-4 p-4 md:flex-row">
-              <div
-                className="relative w-full md:w-1/2"
-                style={{
-                  aspectRatio: '1/1',
-                  transform: 'translateZ(0)',
-                }}
-              >
-                <motion.div
-                  className="h-full w-full"
+              <div className="flex w-full justify-center md:w-1/2">
+                <div
+                  className="relative w-full"
                   style={{
-                    position: 'relative',
+                    aspectRatio: '1/1',
                     transform: 'translateZ(0)',
                   }}
                 >
-                  <Chessground
-                    key={stableKey}
-                    contained
-                    config={{
-                      fen: puzzle.fen,
-                      viewOnly: true,
-                      coordinates: true,
-                      drawable: {
-                        enabled: true,
-                        visible: true,
-                        defaultSnapToValidMove: true,
-                        shapes,
-                        brushes: {
-                          green: {
-                            key: 'g',
-                            color: '#15781B',
-                            opacity: 1,
-                            lineWidth: 10,
-                          },
-                          red: {
-                            key: 'r',
-                            color: '#882020',
-                            opacity: 1,
-                            lineWidth: 10,
-                          },
-                          blue: {
-                            key: 'b',
-                            color: '#003088',
-                            opacity: 1,
-                            lineWidth: 10,
-                          },
-                          yellow: {
-                            key: 'y',
-                            color: '#e68f00',
-                            opacity: 1,
-                            lineWidth: 10,
+                  <motion.div
+                    className="h-full w-full"
+                    style={{
+                      position: 'relative',
+                      transform: 'translateZ(0)',
+                    }}
+                  >
+                    <Chessground
+                      key={stableKey}
+                      contained
+                      config={{
+                        fen: puzzle.fen,
+                        viewOnly: true,
+                        coordinates: true,
+                        drawable: {
+                          enabled: true,
+                          visible: true,
+                          defaultSnapToValidMove: true,
+                          shapes,
+                          brushes: {
+                            green: {
+                              key: 'g',
+                              color: '#15781B',
+                              opacity: 1,
+                              lineWidth: 10,
+                            },
+                            red: {
+                              key: 'r',
+                              color: '#882020',
+                              opacity: 1,
+                              lineWidth: 10,
+                            },
+                            blue: {
+                              key: 'b',
+                              color: '#003088',
+                              opacity: 1,
+                              lineWidth: 10,
+                            },
+                            yellow: {
+                              key: 'y',
+                              color: '#e68f00',
+                              opacity: 1,
+                              lineWidth: 10,
+                            },
                           },
                         },
-                      },
-                      highlight: {
-                        lastMove: true,
-                        check: true,
-                      },
-                      animation: {
-                        duration: 0,
-                      },
-                    }}
-                  />{' '}
-                </motion.div>
+                        highlight: {
+                          lastMove: true,
+                          check: true,
+                        },
+                        animation: {
+                          duration: 0,
+                        },
+                      }}
+                    />{' '}
+                  </motion.div>
+                </div>
               </div>
               <div className="flex w-full flex-col md:w-1/2">
                 <motion.div

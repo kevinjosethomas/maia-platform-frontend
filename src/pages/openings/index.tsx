@@ -526,7 +526,7 @@ const OpeningsPage: NextPage = () => {
         {/* Right Panel - Analysis */}
         <div
           id="analysis"
-          className="flex h-[calc(55vh+4.5rem)] w-full flex-col gap-2"
+          className="flex h-[85vh] w-full flex-col gap-2 xl:h-[calc(55vh+4.5rem)]"
         >
           <OpeningDrillAnalysis
             currentNode={controller.currentNode}

@@ -55,7 +55,9 @@ class Engine {
       this.store = {}
       this.legalMoveCount = legalMoveCount
       const board = new Chess(fen)
-      this.moves = board.moves({ verbose: true }).map((x) => x.from + x.to)
+      this.moves = board
+        .moves({ verbose: true })
+        .map((x) => x.from + x.to + (x.promotion || ''))
       this.fen = fen
       this.isEvaluating = true
       this.evaluationGenerator = this.createEvaluationGenerator()

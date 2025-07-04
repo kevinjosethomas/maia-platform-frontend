@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { PlayerStats } from 'src/types'
 import { getPlayerStats } from 'src/api'
+import { useLeaderboardContext } from './LeaderboardContext'
 
 interface Props {
   index: number
@@ -20,8 +21,12 @@ export const LeaderboardEntry = ({
   elo,
 }: Props) => {
   const [hover, setHover] = useState(false)
-  const [popup, setPopup] = useState(false)
   const [stats, setStats] = useState<PlayerStats | null>(null)
+  const shouldShowPopupRef = useRef(false)
+  const { activePopup, setActivePopup } = useLeaderboardContext()
+
+  const entryKey = `${typeId}-${display_name}-${index}`
+  const isPopupVisible = activePopup === entryKey
 
   let ratingKey:
     | 'regularRating'
@@ -88,28 +93,38 @@ export const LeaderboardEntry = ({
       break
   }
 
+  const fetchStats = useCallback(async () => {
+    try {
+      const playerStats = await getPlayerStats(display_name)
+      setStats(playerStats)
+      // Only show popup if we're still supposed to (user still hovering)
+      if (shouldShowPopupRef.current && hover) {
+        setActivePopup(entryKey)
+      }
+    } catch (error) {
+      console.error(error)
+    }
+  }, [display_name, hover, entryKey, setActivePopup])
+
   useEffect(() => {
     let timer: NodeJS.Timeout
     if (hover) {
+      shouldShowPopupRef.current = true
       timer = setTimeout(() => {
         fetchStats()
       }, 500)
     } else {
-      setPopup(false)
+      shouldShowPopupRef.current = false
+      setActivePopup(null)
     }
 
-    return () => clearTimeout(timer)
-  }, [hover])
-
-  const fetchStats = async () => {
-    try {
-      const playerStats = await getPlayerStats(display_name)
-      setStats(playerStats)
-      setPopup(true)
-    } catch (error) {
-      console.error(error)
+    return () => {
+      clearTimeout(timer)
+      if (!hover) {
+        shouldShowPopupRef.current = false
+      }
     }
-  }
+  }, [hover, setActivePopup, entryKey, fetchStats])
 
   return (
     <div
@@ -129,7 +144,7 @@ export const LeaderboardEntry = ({
         </Link>
       </div>
       <p>{elo}</p>
-      {popup && stats && (
+      {isPopupVisible && stats && (
         <div className="absolute left-0 top-[100%] z-20 flex w-full max-w-[26rem] flex-col overflow-hidden rounded border border-white/10 bg-background-1">
           <div className="flex w-full justify-between bg-backdrop/50 px-4 py-2">
             <p>

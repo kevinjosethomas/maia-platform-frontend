@@ -101,7 +101,7 @@ const researchPapers = {
     {
       title:
         'Detecting Individual Decision‑Making Style: Exploring Behavioral Stylometry in Chess',
-      link: 'https://www.cs.toronto.edu/~ashton/pubs/maia-personalized2021.pdf',
+      link: 'https://www.cs.toronto.edu/~ashton/pubs/chessembed-neurips2021.pdf',
       description:
         'Shows that your chess style is as unique as a fingerprint, allowing the model to recognize you just by your move choices.',
     },

@@ -10,6 +10,7 @@ import {
 } from 'src/components/Icons/icons'
 import { getLeaderboard } from 'src/api'
 import { LeaderboardColumn } from 'src/components'
+import { LeaderboardProvider } from 'src/components/Leaderboard/LeaderboardContext'
 
 const Leaderboard: React.FC = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
@@ -63,36 +64,38 @@ const Leaderboard: React.FC = () => {
   }, [fetchLeaderboard])
 
   return (
-    <div className="mx-auto flex h-full w-[90%] flex-col items-start justify-center gap-8 py-[2%]">
-      <Head>
-        <title>Leaderboard – Maia Chess</title>
-        <meta
-          name="description"
-          content="Top users across all Maia Chess leaderboards"
-        />
-      </Head>
-      <div className="flex flex-col">
-        <h1 className="text-4xl font-bold">Rating Leaderboards</h1>
-        <p>
-          Last Updated:{' '}
-          {lastUpdated
-            ? lastUpdated.toLocaleString(undefined, {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true,
-              })
-            : '...'}
-        </p>
+    <LeaderboardProvider>
+      <div className="mx-auto flex h-full w-[90%] flex-col items-start justify-center gap-8 py-[2%]">
+        <Head>
+          <title>Leaderboard – Maia Chess</title>
+          <meta
+            name="description"
+            content="Top users across all Maia Chess leaderboards"
+          />
+        </Head>
+        <div className="flex flex-col">
+          <h1 className="text-4xl font-bold">Rating Leaderboards</h1>
+          <p>
+            Last Updated:{' '}
+            {lastUpdated
+              ? lastUpdated.toLocaleString(undefined, {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true,
+                })
+              : '...'}
+          </p>
+        </div>
+        <div className="grid h-full w-full grid-cols-1 justify-start gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {leaderboard?.map((column, index) => (
+            <LeaderboardColumn key={index} {...column} />
+          ))}
+        </div>
       </div>
-      <div className="grid h-full w-full grid-cols-1 justify-start gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {leaderboard?.map((column, index) => (
-          <LeaderboardColumn key={index} {...column} />
-        ))}
-      </div>
-    </div>
+    </LeaderboardProvider>
   )
 }
 

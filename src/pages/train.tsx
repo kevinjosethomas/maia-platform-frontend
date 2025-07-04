@@ -38,6 +38,7 @@ import {
   Highlight,
   MoveMap,
   BlunderMeter,
+  MovesByRating,
 } from 'src/components'
 import { useTrainingController } from 'src/hooks/useTrainingController'
 import { useAnalysisController } from 'src/hooks/useAnalysisController'
@@ -100,13 +101,21 @@ const TrainPage: NextPage = () => {
     setPreviousGameResults(previousGameResults.concat([{ ...game }]))
   }, [trainingGames, previousGameResults, router])
 
-  useEffect(() => {
-    if (currentIndex == trainingGames.length - 1) {
-      setStatus('default')
-    } else {
-      setStatus('archived')
-    }
-  }, [currentIndex])
+  // useEffect(() => {
+  //   if (currentIndex == trainingGames.length - 1) {
+  //     // For the current puzzle, only set to 'default' if it hasn't been completed yet
+  //     const currentPuzzleResult = previousGameResults[currentIndex]
+  //     if (currentPuzzleResult?.result !== undefined) {
+  //       // Puzzle was completed - preserve the correct status
+  //       setStatus(currentPuzzleResult.result ? 'correct' : 'forfeit')
+  //     } else {
+  //       // Puzzle not completed yet - set to default
+  //       setStatus('default')
+  //     }
+  //   } else {
+  //     setStatus('archived')
+  //   }
+  // }, [currentIndex, previousGameResults])
 
   const logGuess = useCallback(
     async (
@@ -116,7 +125,9 @@ const TrainPage: NextPage = () => {
       setStatus: Dispatch<SetStateAction<Status>>,
       rating: number,
     ) => {
-      if (currentIndex != trainingGames.length - 1) {
+      const puzzleIdx = currentIndex
+
+      if (puzzleIdx != trainingGames.length - 1) {
         return // No logging for past puzzles
       }
 
@@ -135,18 +146,18 @@ const TrainPage: NextPage = () => {
       if (status === 'forfeit') {
         setPreviousGameResults((prev) => {
           return prev.map((game, index) => {
-            return index == currentIndex
+            return index === puzzleIdx
               ? {
                   ...game,
                   result: false,
-                  ratingDiff: response.puzzle_elo - rating,
+                  ratingDiff: game.ratingDiff ?? response.puzzle_elo - rating,
                 }
               : game
           })
         })
 
         // If the user forfeits, update their stats
-        if (userGuesses.length == 0) {
+        if (userGuesses.length === 0) {
           updateRating(response.puzzle_elo)
           incrementStats(1, 0)
         }
@@ -167,7 +178,7 @@ const TrainPage: NextPage = () => {
         if (newGuesses.length && response.correct_moves) {
           setPreviousGameResults((prev) => {
             return prev.map((game, index) => {
-              return index == currentIndex
+              return index === puzzleIdx
                 ? {
                     ...game,
                     result,
@@ -192,6 +203,7 @@ const TrainPage: NextPage = () => {
   if (trainingGames.length && trainingGames[currentIndex])
     return (
       <Train
+        key={trainingGames[currentIndex].id}
         status={status}
         setStatus={setStatus}
         trainingGame={trainingGames[currentIndex]}
@@ -262,7 +274,8 @@ const Train: React.FC<Props> = ({
     [string, string] | null
   >(null)
 
-  const showAnalysis = status === 'correct' || status === 'forfeit'
+  const showAnalysis =
+    status === 'correct' || status === 'forfeit' || status === 'archived'
 
   const currentPlayer = useMemo(() => {
     const currentNode = showAnalysis
@@ -270,12 +283,6 @@ const Train: React.FC<Props> = ({
       : controller.currentNode
     return getCurrentPlayer(currentNode)
   }, [showAnalysis, analysisController.currentNode, controller.currentNode])
-
-  useEffect(() => {
-    if (controller.currentNode.fen === controller.puzzleStartingNode.fen) {
-      setStatus('default')
-    }
-  }, [controller.currentNode])
 
   useEffect(() => {
     if (showAnalysis && !analysisSyncedRef.current) {
@@ -716,48 +723,137 @@ const Train: React.FC<Props> = ({
           </div>
           <div
             id="analysis"
-            className="flex h-[calc(55vh+4.5rem)] w-full flex-col gap-2"
+            className="flex h-[calc(85vh)] w-full flex-col gap-2 xl:h-[calc(55vh+4.5rem)]"
           >
             <div className="relative">
-              <div className="flex h-[calc((55vh+4.5rem)/2)]">
-                <Highlight
-                  hover={showAnalysis ? hover : mockHover}
-                  makeMove={showAnalysis ? makeMove : mockMakeMove}
-                  currentMaiaModel={
-                    showAnalysis
-                      ? analysisController.currentMaiaModel
-                      : 'maia_kdd_1500'
-                  }
-                  recommendations={
-                    showAnalysis
-                      ? analysisController.moveRecommendations
-                      : mockAnalysisData.recommendations
-                  }
-                  moveEvaluation={
-                    showAnalysis
-                      ? (analysisController.moveEvaluation as {
-                          maia?: MaiaEvaluation
-                          stockfish?: StockfishEvaluation
-                        })
-                      : mockAnalysisData.moveEvaluation
-                  }
-                  movesByRating={
-                    showAnalysis
-                      ? analysisController.movesByRating
-                      : mockAnalysisData.movesByRating
-                  }
-                  colorSanMapping={
-                    showAnalysis
-                      ? analysisController.colorSanMapping
-                      : mockAnalysisData.colorSanMapping
-                  }
-                  boardDescription={
-                    showAnalysis
-                      ? analysisController.boardDescription
-                      : 'This position offers multiple strategic options. Consider central control and piece development.'
-                  }
-                />
+              {/* Large screens (xl+): Side by side layout */}
+              <div className="hidden xl:flex xl:h-[calc((55vh+4.5rem)/2)]">
+                <div className="flex h-full w-full overflow-hidden rounded border-[0.5px] border-white/40">
+                  <div className="flex h-full w-auto min-w-[40%] max-w-[40%] border-r-[0.5px] border-white/40">
+                    <div className="relative w-full">
+                      <Highlight
+                        hover={showAnalysis ? hover : mockHover}
+                        makeMove={showAnalysis ? makeMove : mockMakeMove}
+                        currentMaiaModel={
+                          showAnalysis
+                            ? analysisController.currentMaiaModel
+                            : 'maia_kdd_1500'
+                        }
+                        recommendations={
+                          showAnalysis
+                            ? analysisController.moveRecommendations
+                            : mockAnalysisData.recommendations
+                        }
+                        moveEvaluation={
+                          showAnalysis
+                            ? (analysisController.moveEvaluation as {
+                                maia?: MaiaEvaluation
+                                stockfish?: StockfishEvaluation
+                              })
+                            : mockAnalysisData.moveEvaluation
+                        }
+                        colorSanMapping={
+                          showAnalysis
+                            ? analysisController.colorSanMapping
+                            : mockAnalysisData.colorSanMapping
+                        }
+                        boardDescription={
+                          showAnalysis
+                            ? analysisController.boardDescription
+                            : 'This position offers multiple strategic options. Consider central control and piece development.'
+                        }
+                      />
+                      {!showAnalysis && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded bg-background-1/80 backdrop-blur-sm">
+                          <div className="rounded bg-background-2/90 p-4 text-center shadow-lg">
+                            <span className="material-symbols-outlined mb-2 text-3xl text-human-3">
+                              lock
+                            </span>
+                            <p className="font-medium text-primary">
+                              Analysis Locked
+                            </p>
+                            <p className="text-sm text-secondary">
+                              Complete the puzzle to unlock analysis
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex h-full w-full bg-background-1">
+                    <MovesByRating
+                      moves={
+                        showAnalysis
+                          ? analysisController.movesByRating
+                          : mockAnalysisData.movesByRating
+                      }
+                      colorSanMapping={
+                        showAnalysis
+                          ? analysisController.colorSanMapping
+                          : mockAnalysisData.colorSanMapping
+                      }
+                    />
+                  </div>
+                </div>
               </div>
+
+              {/* Smaller screens (below xl): Combined Highlight + BlunderMeter container */}
+              <div className="flex h-[calc((85vh)*0.3)] overflow-hidden rounded border-[0.5px] border-white/40 bg-background-1 xl:hidden">
+                <div className="flex h-full w-full border-r-[0.5px] border-white/40">
+                  <Highlight
+                    hover={showAnalysis ? hover : mockHover}
+                    makeMove={showAnalysis ? makeMove : mockMakeMove}
+                    currentMaiaModel={
+                      showAnalysis
+                        ? analysisController.currentMaiaModel
+                        : 'maia_kdd_1500'
+                    }
+                    recommendations={
+                      showAnalysis
+                        ? analysisController.moveRecommendations
+                        : mockAnalysisData.recommendations
+                    }
+                    moveEvaluation={
+                      showAnalysis
+                        ? (analysisController.moveEvaluation as {
+                            maia?: MaiaEvaluation
+                            stockfish?: StockfishEvaluation
+                          })
+                        : mockAnalysisData.moveEvaluation
+                    }
+                    colorSanMapping={
+                      showAnalysis
+                        ? analysisController.colorSanMapping
+                        : mockAnalysisData.colorSanMapping
+                    }
+                    boardDescription={
+                      showAnalysis
+                        ? analysisController.boardDescription
+                        : 'This position offers multiple strategic options. Consider central control and piece development.'
+                    }
+                  />
+                </div>
+                <div className="flex h-full w-auto min-w-[40%] max-w-[40%] bg-background-1 p-3">
+                  <div className="h-full w-full">
+                    <BlunderMeter
+                      hover={showAnalysis ? hover : mockHover}
+                      makeMove={showAnalysis ? makeMove : mockMakeMove}
+                      data={
+                        showAnalysis
+                          ? analysisController.blunderMeter
+                          : mockAnalysisData.blunderMeter
+                      }
+                      colorSanMapping={
+                        showAnalysis
+                          ? analysisController.colorSanMapping
+                          : mockAnalysisData.colorSanMapping
+                      }
+                      showContainer={false}
+                    />
+                  </div>
+                </div>
+              </div>
+
               {!showAnalysis && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded bg-background-1/80 backdrop-blur-sm">
                   <div className="rounded bg-background-2/90 p-4 text-center shadow-lg">
@@ -772,8 +868,10 @@ const Train: React.FC<Props> = ({
                 </div>
               )}
             </div>
+
             <div className="relative">
-              <div className="flex h-[calc((55vh+4.5rem)/2)] flex-row gap-2">
+              {/* Large screens (xl+): Side by side layout */}
+              <div className="hidden xl:flex xl:h-[calc((55vh+4.5rem)/2)] xl:flex-row xl:gap-2">
                 <div className="flex h-full w-full flex-col">
                   <MoveMap
                     moveMap={
@@ -806,19 +904,75 @@ const Train: React.FC<Props> = ({
                   }
                 />
               </div>
-              {!showAnalysis && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded bg-background-1/80 backdrop-blur-sm">
-                  <div className="rounded bg-background-2/90 p-4 text-center shadow-lg">
-                    <span className="material-symbols-outlined mb-2 text-3xl text-human-3">
-                      lock
-                    </span>
-                    <p className="font-medium text-primary">Analysis Locked</p>
-                    <p className="text-sm text-secondary">
-                      Complete the puzzle to unlock analysis
-                    </p>
-                  </div>
+
+              {/* Smaller screens (below xl): MoveMap full width */}
+              <div className="flex h-[calc((85vh)*0.35)] w-full xl:hidden">
+                <div className="relative h-full w-full">
+                  <MoveMap
+                    moveMap={
+                      showAnalysis
+                        ? analysisController.moveMap
+                        : mockAnalysisData.moveMap
+                    }
+                    colorSanMapping={
+                      showAnalysis
+                        ? analysisController.colorSanMapping
+                        : mockAnalysisData.colorSanMapping
+                    }
+                    setHoverArrow={
+                      showAnalysis ? setHoverArrow : mockSetHoverArrow
+                    }
+                  />
+                  {!showAnalysis && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded bg-background-1/80 backdrop-blur-sm">
+                      <div className="rounded bg-background-2/90 p-4 text-center shadow-lg">
+                        <span className="material-symbols-outlined mb-2 text-3xl text-human-3">
+                          lock
+                        </span>
+                        <p className="font-medium text-primary">
+                          Analysis Locked
+                        </p>
+                        <p className="text-sm text-secondary">
+                          Complete the puzzle to unlock analysis
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+            </div>
+
+            {/* Smaller screens (below xl): MovesByRating full width */}
+            <div className="flex h-[calc((85vh)*0.35)] w-full rounded bg-background-1/60 xl:hidden">
+              <div className="relative h-full w-full">
+                <MovesByRating
+                  moves={
+                    showAnalysis
+                      ? analysisController.movesByRating
+                      : mockAnalysisData.movesByRating
+                  }
+                  colorSanMapping={
+                    showAnalysis
+                      ? analysisController.colorSanMapping
+                      : mockAnalysisData.colorSanMapping
+                  }
+                />
+                {!showAnalysis && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded bg-background-1/80 backdrop-blur-sm">
+                    <div className="rounded bg-background-2/90 p-4 text-center shadow-lg">
+                      <span className="material-symbols-outlined mb-2 text-3xl text-human-3">
+                        lock
+                      </span>
+                      <p className="font-medium text-primary">
+                        Analysis Locked
+                      </p>
+                      <p className="text-sm text-secondary">
+                        Complete the puzzle to unlock analysis
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -983,11 +1137,6 @@ const Train: React.FC<Props> = ({
                           stockfish?: StockfishEvaluation
                         })
                       : mockAnalysisData.moveEvaluation
-                  }
-                  movesByRating={
-                    showAnalysis
-                      ? analysisController.movesByRating
-                      : mockAnalysisData.movesByRating
                   }
                   colorSanMapping={
                     showAnalysis

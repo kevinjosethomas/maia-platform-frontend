@@ -34,6 +34,7 @@ import {
   GameInfo,
   Highlight,
   BlunderMeter,
+  MovesByRating,
   AnalysisGameList,
   GameBoard,
   DownloadModelModal,
@@ -690,40 +691,109 @@ const Analysis: React.FC<Props> = ({
         </div>
         <div
           id="analysis"
-          className="flex h-[calc(55vh+5rem)] w-full flex-col gap-2"
+          className="flex h-[calc(85vh)] w-full flex-col gap-2 xl:h-[calc(55vh+5rem)]"
         >
-          <div className="flex h-[calc((55vh+4.5rem)/2)]">
-            <Highlight
-              hover={hover}
-              makeMove={makeMove}
-              currentMaiaModel={controller.currentMaiaModel}
-              recommendations={controller.moveRecommendations}
-              moveEvaluation={
-                controller.moveEvaluation as {
-                  maia?: MaiaEvaluation
-                  stockfish?: StockfishEvaluation
-                }
-              }
-              movesByRating={controller.movesByRating}
-              colorSanMapping={controller.colorSanMapping}
-              boardDescription={controller.boardDescription}
-            />
-          </div>
-          <div className="flex h-[calc((55vh+4.5rem)/2)] flex-row gap-2">
-            <div className="flex h-full w-full flex-col">
-              <MoveMap
-                moveMap={controller.moveMap}
+          {/* Large screens (xl+): Side by side layout */}
+          <div className="hidden xl:flex xl:h-full xl:flex-col xl:gap-2">
+            <div className="flex h-[calc((55vh+4.5rem)/2)] gap-2">
+              {/* Combined Highlight + MovesByRating container */}
+              <div className="flex h-full w-full overflow-hidden rounded border-[0.5px] border-white/40">
+                <div className="flex h-full w-auto min-w-[40%] max-w-[40%] border-r-[0.5px] border-white/40">
+                  <Highlight
+                    hover={hover}
+                    makeMove={makeMove}
+                    currentMaiaModel={controller.currentMaiaModel}
+                    recommendations={controller.moveRecommendations}
+                    moveEvaluation={
+                      controller.moveEvaluation as {
+                        maia?: MaiaEvaluation
+                        stockfish?: StockfishEvaluation
+                      }
+                    }
+                    colorSanMapping={controller.colorSanMapping}
+                    boardDescription={controller.boardDescription}
+                  />
+                </div>
+                <div className="flex h-full w-full bg-background-1">
+                  <MovesByRating
+                    moves={controller.movesByRating}
+                    colorSanMapping={controller.colorSanMapping}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex h-[calc((55vh+4.5rem)/2)] flex-row gap-2">
+              <div className="flex h-full w-full flex-col">
+                <MoveMap
+                  moveMap={controller.moveMap}
+                  colorSanMapping={controller.colorSanMapping}
+                  setHoverArrow={setHoverArrow}
+                />
+              </div>
+              <BlunderMeter
+                hover={hover}
+                makeMove={makeMove}
+                data={controller.blunderMeter}
                 colorSanMapping={controller.colorSanMapping}
-                setHoverArrow={setHoverArrow}
+                moveEvaluation={controller.moveEvaluation}
               />
             </div>
-            <BlunderMeter
-              hover={hover}
-              makeMove={makeMove}
-              data={controller.blunderMeter}
-              colorSanMapping={controller.colorSanMapping}
-              moveEvaluation={controller.moveEvaluation}
-            />
+          </div>
+
+          {/* Smaller screens (below xl): 3-row stacked layout */}
+          <div className="flex h-full flex-col gap-2 xl:hidden">
+            {/* Row 1: Combined Highlight + BlunderMeter container */}
+            <div className="flex h-[calc((85vh)*0.3)] overflow-hidden rounded border-[0.5px] border-white/40 bg-background-1">
+              <div className="flex h-full w-full border-r-[0.5px] border-white/40">
+                <Highlight
+                  hover={hover}
+                  makeMove={makeMove}
+                  currentMaiaModel={controller.currentMaiaModel}
+                  recommendations={controller.moveRecommendations}
+                  moveEvaluation={
+                    controller.moveEvaluation as {
+                      maia?: MaiaEvaluation
+                      stockfish?: StockfishEvaluation
+                    }
+                  }
+                  colorSanMapping={controller.colorSanMapping}
+                  boardDescription={controller.boardDescription}
+                />
+              </div>
+              <div className="flex h-full w-auto min-w-[40%] max-w-[40%] bg-background-1 p-3">
+                <div className="h-full w-full">
+                  <BlunderMeter
+                    hover={hover}
+                    makeMove={makeMove}
+                    data={controller.blunderMeter}
+                    colorSanMapping={controller.colorSanMapping}
+                    moveEvaluation={controller.moveEvaluation}
+                    showContainer={false}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Row 2: MoveMap */}
+            <div className="flex h-[calc((85vh)*0.35)] w-full">
+              <div className="h-full w-full">
+                <MoveMap
+                  moveMap={controller.moveMap}
+                  colorSanMapping={controller.colorSanMapping}
+                  setHoverArrow={setHoverArrow}
+                />
+              </div>
+            </div>
+
+            {/* Row 3: MovesByRating */}
+            <div className="flex h-[calc((85vh)*0.35)] w-full rounded bg-background-1/60">
+              <div className="h-full w-full">
+                <MovesByRating
+                  moves={controller.movesByRating}
+                  colorSanMapping={controller.colorSanMapping}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -862,9 +932,12 @@ const Analysis: React.FC<Props> = ({
                     stockfish?: StockfishEvaluation
                   }
                 }
-                movesByRating={controller.movesByRating}
                 colorSanMapping={controller.colorSanMapping}
                 boardDescription={controller.boardDescription}
+              />
+              <MovesByRating
+                moves={controller.movesByRating}
+                colorSanMapping={controller.colorSanMapping}
               />
               <MoveMap
                 moveMap={controller.moveMap}
