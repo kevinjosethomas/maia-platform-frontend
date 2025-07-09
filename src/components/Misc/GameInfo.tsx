@@ -1,7 +1,5 @@
-import { useContext } from 'react'
-
-import { ModalContext, useTour } from 'src/contexts'
-import { InstructionsType } from 'src/components'
+import { useTour } from 'src/contexts'
+import { InstructionsType } from 'src/types'
 import { tourConfigs } from 'src/config/tours'
 
 interface Props {
@@ -27,11 +25,13 @@ export const GameInfo: React.FC<Props> = ({
   showGameListButton,
   onGameListClick,
 }: Props) => {
-  const { setInstructionsModalProps } = useContext(ModalContext)
-  const { startTour, hasCompletedTour } = useTour()
+  const { startTour } = useTour()
 
   return (
-    <div className="flex w-full flex-col items-start justify-start gap-1 overflow-hidden bg-background-1 p-3 md:rounded">
+    <div
+      id="analysis-game-list"
+      className="flex w-full flex-col items-start justify-start gap-1 overflow-hidden bg-background-1 p-3 md:rounded"
+    >
       <div className="flex w-full items-center justify-between">
         <div className="flex items-center justify-start gap-1.5">
           <span className="material-symbols-outlined text-xl">{icon}</span>
@@ -76,7 +76,7 @@ export const GameInfo: React.FC<Props> = ({
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              // Map page types to tour configs
+
               const tourTypeMap: { [key: string]: keyof typeof tourConfigs } = {
                 againstMaia: 'play',
                 handAndBrain: 'handBrain',
@@ -86,14 +86,9 @@ export const GameInfo: React.FC<Props> = ({
               }
 
               const tourType = tourTypeMap[type]
-
-              // Check if page type has a tour configuration
               if (tourType && tourConfigs[tourType]) {
                 const tourConfig = tourConfigs[tourType]
-                // Force restart the tour even if completed
                 startTour(tourConfig.id, tourConfig.steps, true)
-              } else {
-                setInstructionsModalProps({ instructionsType: type })
               }
             }}
           >

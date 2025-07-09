@@ -69,9 +69,7 @@ const MAIA_MODELS = [
 ]
 
 const AnalysisPage: NextPage = () => {
-  const { openedModals, setInstructionsModalProps: setInstructionsModalProps } =
-    useContext(ModalContext)
-  const { startTour, hasCompletedTour } = useTour()
+  const { startTour } = useTour()
 
   const router = useRouter()
   const { id } = router.query
@@ -82,19 +80,12 @@ const AnalysisPage: NextPage = () => {
   const [initialTourCheck, setInitialTourCheck] = useState(false)
 
   useEffect(() => {
-    if (!openedModals.analysis && !initialTourCheck) {
+    if (!initialTourCheck) {
       setInitialTourCheck(true)
-      // Check if user has completed the tour on initial load only
-      const completedTours =
-        typeof window !== 'undefined'
-          ? JSON.parse(localStorage.getItem('maia-completed-tours') || '[]')
-          : []
-
-      if (!completedTours.includes('analysis')) {
-        startTour(tourConfigs.analysis.id, tourConfigs.analysis.steps, false)
-      }
+      // Always attempt to start the tour - the tour context will handle completion checking
+      startTour(tourConfigs.analysis.id, tourConfigs.analysis.steps, false)
     }
-  }, [openedModals.analysis, initialTourCheck])
+  }, [initialTourCheck, startTour])
   const [currentId, setCurrentId] = useState<string[]>(id as string[])
 
   const getAndSetTournamentGame = useCallback(
@@ -888,7 +879,7 @@ const Analysis: React.FC<Props> = ({
             >
               <NestedGameInfo />
             </GameInfo>
-            <div className="relative flex h-[100vw] w-screen">
+            <div id="analysis" className="relative flex h-[100vw] w-screen">
               <GameBoard
                 game={analyzedGame}
                 availableMoves={controller.moves}

@@ -47,37 +47,16 @@ const PlayHandBrain: React.FC<Props> = ({
 }
 
 const PlayHandBrainPage: NextPage = () => {
-  const { openedModals, setInstructionsModalProps: setInstructionsModalProps } =
-    useContext(ModalContext)
-  const { startTour, hasCompletedTour } = useTour()
+  const { startTour } = useTour()
   const [initialTourCheck, setInitialTourCheck] = useState(false)
 
   useEffect(() => {
-    if (!openedModals.handAndBrain) {
-      setInstructionsModalProps({ instructionsType: 'handAndBrain' })
-    }
-    return () => setInstructionsModalProps(undefined)
-  }, [setInstructionsModalProps, openedModals.handAndBrain])
-
-  useEffect(() => {
-    if (!openedModals.handAndBrain && !initialTourCheck) {
+    if (!initialTourCheck) {
       setInitialTourCheck(true)
-      // Check if user has completed the tour on initial load only
-      if (typeof window !== 'undefined') {
-        const completedTours = JSON.parse(
-          localStorage.getItem('maia-completed-tours') || '[]',
-        )
-
-        if (!completedTours.includes('handBrain')) {
-          startTour(
-            tourConfigs.handBrain.id,
-            tourConfigs.handBrain.steps,
-            false,
-          )
-        }
-      }
+      // Always attempt to start the tour - the tour context will handle completion checking
+      startTour(tourConfigs.handBrain.id, tourConfigs.handBrain.steps, false)
     }
-  }, [openedModals.handAndBrain, initialTourCheck, startTour])
+  }, [initialTourCheck, startTour])
 
   const router = useRouter()
 

@@ -54,16 +54,20 @@ export const TourManager: React.FC = () => {
 
         // If position is null and we haven't found the target yet, retry after a short delay
         if (!position) {
-          const retryCount = 5
-          const retryDelay = 100
+          const retryCount = 10
+          const retryDelay = 200
 
           const retry = (attempt: number) => {
-            if (attempt >= retryCount) return
+            if (attempt >= retryCount) {
+              return
+            }
 
             setTimeout(() => {
               const retryPosition = calculateTargetPosition()
               if (retryPosition) {
                 setTargetPosition(retryPosition)
+                // Auto-scroll to ensure target element is visible
+                ensureTargetIsVisible()
               } else {
                 retry(attempt + 1)
               }
@@ -71,19 +75,69 @@ export const TourManager: React.FC = () => {
           }
 
           retry(0)
+        } else {
+          // Auto-scroll to ensure target element is visible
+          ensureTargetIsVisible()
         }
       }
 
-      updatePosition()
+      const ensureTargetIsVisible = () => {
+        const targetElement = document.getElementById(currentStep.targetId)
+        if (targetElement) {
+          const rect = targetElement.getBoundingClientRect()
+          const viewportHeight = window.innerHeight
+          const margin = 100 // Give some margin
 
-      // Update position on scroll/resize
-      const handleScroll = () => updatePosition()
-      window.addEventListener('scroll', handleScroll)
-      window.addEventListener('resize', handleScroll)
+          // Only scroll if element is significantly off-screen
+          const isSignificantlyOffScreen =
+            rect.top < margin ||
+            rect.bottom > viewportHeight - margin ||
+            rect.left < 0 ||
+            rect.right > window.innerWidth
+
+          if (isSignificantlyOffScreen) {
+            // Use a gentler scroll that doesn't center aggressively
+            targetElement.scrollIntoView({
+              behavior: 'smooth',
+              block: 'nearest',
+              inline: 'nearest',
+            })
+          }
+        }
+      }
+
+      // Add a small delay to ensure DOM is ready
+      setTimeout(() => {
+        updatePosition()
+      }, 100)
+
+      // Update position on scroll/resize with throttling for better performance
+      let throttleTimer: NodeJS.Timeout | null = null
+      const handleScroll = () => {
+        if (throttleTimer) return
+        throttleTimer = setTimeout(() => {
+          updatePosition()
+          throttleTimer = null
+        }, 16) // ~60fps
+      }
+
+      const handleResize = () => {
+        if (throttleTimer) return
+        throttleTimer = setTimeout(() => {
+          updatePosition()
+          throttleTimer = null
+        }, 16) // ~60fps
+      }
+
+      window.addEventListener('scroll', handleScroll, { passive: true })
+      window.addEventListener('resize', handleResize, { passive: true })
 
       return () => {
         window.removeEventListener('scroll', handleScroll)
-        window.removeEventListener('resize', handleScroll)
+        window.removeEventListener('resize', handleResize)
+        if (throttleTimer) {
+          clearTimeout(throttleTimer)
+        }
       }
     } else {
       // Reset target position when tour is not active
@@ -132,20 +186,30 @@ export const TourManager: React.FC = () => {
     skipTour,
   ])
 
-  // Calculate tooltip position
+  // Calculate tooltip position with responsive design
   const getTooltipPosition = () => {
-    if (!targetPosition || !currentStep) return { top: 0, left: 0 }
+    if (!targetPosition || !currentStep) return { top: 0, left: 0, width: 320 }
 
     const placement = currentStep.placement || 'bottom'
     const offset = currentStep.offset || { x: 0, y: 0 }
-    const tooltipWidth = 320
-    const tooltipHeight = 200 // Approximate height
-    const gap = 20
+    const isMobile = window.innerWidth <= 768
+    const gap = isMobile ? 12 : 20
+
+    // Responsive tooltip dimensions
+    const tooltipWidth = isMobile ? Math.min(320, window.innerWidth - 40) : 320
+    const tooltipHeight = isMobile ? 180 : 200 // Slightly smaller on mobile
+    const padding = isMobile ? 12 : 20
 
     let top = 0
     let left = 0
 
-    switch (placement) {
+    // Only modify placement on very small screens (mobile)
+    const effectivePlacement =
+      isMobile && window.innerWidth <= 480 && placement === 'left'
+        ? 'bottom'
+        : placement
+
+    switch (effectivePlacement) {
       case 'top':
         top = targetPosition.top - tooltipHeight - gap
         left = targetPosition.left + targetPosition.width / 2 - tooltipWidth / 2
@@ -164,18 +228,28 @@ export const TourManager: React.FC = () => {
         break
     }
 
-    // Ensure tooltip stays within viewport
-    const padding = 20
-    top = Math.max(
-      padding,
-      Math.min(top, window.innerHeight - tooltipHeight - padding),
-    )
-    left = Math.max(
-      padding,
-      Math.min(left, window.innerWidth - tooltipWidth - padding),
-    )
+    // Ensure tooltip stays within viewport - be more conservative on desktop
+    const viewportHeight = window.innerHeight
+    const viewportWidth = window.innerWidth
 
-    return { top: top + offset.y, left: left + offset.x }
+    // Adjust if tooltip goes off-screen
+    if (top < padding) {
+      top = padding
+    } else if (top + tooltipHeight > viewportHeight - padding) {
+      top = viewportHeight - tooltipHeight - padding
+    }
+
+    if (left < padding) {
+      left = padding
+    } else if (left + tooltipWidth > viewportWidth - padding) {
+      left = viewportWidth - tooltipWidth - padding
+    }
+
+    return {
+      top: top + offset.y,
+      left: left + offset.x,
+      width: tooltipWidth,
+    }
   }
 
   const handleNext = () => {
@@ -236,21 +310,22 @@ export const TourManager: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          className="absolute z-[10000] w-80 rounded-lg bg-background-1 shadow-xl"
+          className="absolute z-[10000] rounded-lg bg-background-1 shadow-xl"
           style={{
             top: tooltipPosition.top,
             left: tooltipPosition.left,
+            width: tooltipPosition.width,
           }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-white/10 p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-human-4">
-                <span className="text-sm font-bold text-white">
+          <div className="flex items-center justify-between border-b border-white/10 p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-human-4 sm:h-8 sm:w-8">
+                <span className="text-xs font-bold text-white sm:text-sm">
                   {tourState.currentStep + 1}
                 </span>
               </div>
-              <h3 className="text-lg font-semibold text-primary">
+              <h3 className="text-base font-semibold text-primary sm:text-lg">
                 {currentStep.title}
               </h3>
             </div>
@@ -259,24 +334,26 @@ export const TourManager: React.FC = () => {
               className="text-secondary hover:text-primary"
               title="Skip tour"
             >
-              <span className="material-symbols-outlined">close</span>
+              <span className="material-symbols-outlined text-lg sm:text-xl">
+                close
+              </span>
             </button>
           </div>
 
           {/* Content */}
-          <div className="p-4">
-            <p className="text-sm leading-relaxed text-secondary">
+          <div className="p-3 sm:p-4">
+            <p className="text-xs leading-relaxed text-secondary sm:text-sm">
               {currentStep.description}
             </p>
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between border-t border-white/10 p-4">
+          <div className="flex items-center justify-between border-t border-white/10 p-3 sm:p-4">
             <div className="flex items-center gap-1">
               {tourState.steps.map((_, index) => (
                 <div
                   key={index}
-                  className={`h-2 w-2 rounded-full ${
+                  className={`h-1.5 w-1.5 rounded-full sm:h-2 sm:w-2 ${
                     index === tourState.currentStep
                       ? 'bg-human-4'
                       : index < tourState.currentStep
@@ -287,27 +364,27 @@ export const TourManager: React.FC = () => {
               ))}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={handlePrev}
                 disabled={tourState.currentStep === 0}
-                className="flex items-center gap-1 rounded bg-background-2 px-3 py-1 text-sm text-secondary transition-colors hover:bg-background-3 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-1 rounded bg-background-2 px-2 py-1 text-xs text-secondary transition-colors hover:bg-background-3 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
               >
-                <span className="material-symbols-outlined text-sm">
+                <span className="material-symbols-outlined text-xs sm:text-sm">
                   arrow_back
                 </span>
-                Previous
+                <span className="hidden sm:inline">Previous</span>
               </button>
 
               <button
                 onClick={handleNext}
-                className="flex items-center gap-1 rounded bg-human-4 px-3 py-1 text-sm text-white transition-colors hover:bg-human-4/80"
+                className="flex items-center gap-1 rounded bg-human-4 px-2 py-1 text-xs text-white transition-colors hover:bg-human-4/80 sm:px-3 sm:text-sm"
               >
                 {tourState.currentStep === tourState.steps.length - 1
                   ? 'Finish'
                   : 'Next'}
                 {tourState.currentStep < tourState.steps.length - 1 && (
-                  <span className="material-symbols-outlined text-sm">
+                  <span className="material-symbols-outlined text-xs sm:text-sm">
                     arrow_forward
                   </span>
                 )}
@@ -316,9 +393,12 @@ export const TourManager: React.FC = () => {
           </div>
 
           {/* Keyboard hints */}
-          <div className="border-t border-white/10 px-4 py-2">
+          <div className="border-t border-white/10 px-3 py-2 sm:px-4">
             <p className="text-xs text-secondary">
-              Use arrow keys to navigate • Press Escape to skip
+              <span className="hidden sm:inline">
+                Use arrow keys to navigate • Press Escape to skip
+              </span>
+              <span className="sm:hidden">Tap to navigate • Tap X to skip</span>
             </p>
           </div>
         </motion.div>

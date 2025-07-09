@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useContext } from 'react'
 import Image from 'next/image'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import Chessground from '@react-chess/chessground'
 import {
   Opening,
@@ -11,6 +11,7 @@ import {
 import { ModalContainer } from '../Misc/ModalContainer'
 import { useTour } from 'src/contexts'
 import { tourConfigs } from 'src/config/tours'
+import { WindowSizeContext } from 'src/contexts/WindowSizeContext'
 
 const MAIA_VERSIONS = [
   { id: 'maia_kdd_1100', name: 'Maia 1100' },
@@ -37,40 +38,47 @@ const TabNavigation: React.FC<{
   activeTab: MobileTab
   setActiveTab: (tab: MobileTab) => void
   selectionsCount: number
-}> = ({ activeTab, setActiveTab, selectionsCount }) => (
-  <div className="flex w-full border-b border-white/10 md:hidden">
-    <button
-      onClick={() => setActiveTab('browse')}
-      className={`flex-1 py-3 text-sm font-medium transition-colors ${
-        activeTab === 'browse'
-          ? 'border-b-2 border-human-4 text-primary'
-          : 'text-secondary hover:text-primary'
-      }`}
-    >
-      Browse
-    </button>
-    <button
-      onClick={() => setActiveTab('preview')}
-      className={`flex-1 py-3 text-sm font-medium transition-colors ${
-        activeTab === 'preview'
-          ? 'border-b-2 border-human-4 text-primary'
-          : 'text-secondary hover:text-primary'
-      }`}
-    >
-      Preview
-    </button>
-    <button
-      onClick={() => setActiveTab('selected')}
-      className={`flex-1 py-3 text-sm font-medium transition-colors ${
-        activeTab === 'selected'
-          ? 'border-b-2 border-human-4 text-primary'
-          : 'text-secondary hover:text-primary'
-      }`}
-    >
-      Selected ({selectionsCount})
-    </button>
-  </div>
-)
+}> = ({ activeTab, setActiveTab, selectionsCount }) => {
+  const { isMobile } = useContext(WindowSizeContext)
+
+  return (
+    <div className="flex w-full border-b border-white/10 md:hidden">
+      <button
+        {...(isMobile ? { id: 'opening-drill-browse' } : {})}
+        onClick={() => setActiveTab('browse')}
+        className={`flex-1 py-3 text-sm font-medium transition-colors ${
+          activeTab === 'browse'
+            ? 'border-b-2 border-human-4 text-primary'
+            : 'text-secondary hover:text-primary'
+        }`}
+      >
+        Browse
+      </button>
+      <button
+        {...(isMobile ? { id: 'opening-drill-preview' } : {})}
+        onClick={() => setActiveTab('preview')}
+        className={`flex-1 py-3 text-sm font-medium transition-colors ${
+          activeTab === 'preview'
+            ? 'border-b-2 border-human-4 text-primary'
+            : 'text-secondary hover:text-primary'
+        }`}
+      >
+        Preview
+      </button>
+      <button
+        {...(isMobile ? { id: 'opening-drill-selected' } : {})}
+        onClick={() => setActiveTab('selected')}
+        className={`flex-1 py-3 text-sm font-medium transition-colors ${
+          activeTab === 'selected'
+            ? 'border-b-2 border-human-4 text-primary'
+            : 'text-secondary hover:text-primary'
+        }`}
+      >
+        Selected ({selectionsCount})
+      </button>
+    </div>
+  )
+}
 
 // Left Panel - Opening Selection - moved outside main component
 const BrowsePanel: React.FC<{

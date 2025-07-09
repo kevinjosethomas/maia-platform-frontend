@@ -68,17 +68,14 @@ const PlayMaia: React.FC<Props> = ({
 }
 
 const PlayMaiaPage: NextPage = () => {
-  const { openedModals, setInstructionsModalProps: setInstructionsModalProps } =
-    useContext(ModalContext)
-  const { startTour, hasCompletedTour } = useTour()
+  const { startTour } = useTour()
   const [initialTourCheck, setInitialTourCheck] = useState(false)
 
   useEffect(() => {
-    if (!openedModals.againstMaia) {
-      setInstructionsModalProps({ instructionsType: 'againstMaia' })
+    if (!initialTourCheck) {
+      startTour(tourConfigs.play.id, tourConfigs.play.steps, false)
     }
-    return () => setInstructionsModalProps(undefined)
-  }, [setInstructionsModalProps, openedModals.againstMaia])
+  }, [initialTourCheck, startTour])
 
   const router = useRouter()
 
@@ -118,20 +115,12 @@ const PlayMaiaPage: NextPage = () => {
   )
 
   useEffect(() => {
-    if (!openedModals.againstMaia && !initialTourCheck) {
+    if (!initialTourCheck) {
       setInitialTourCheck(true)
-      // Check if user has completed the tour on initial load only
-      if (typeof window !== 'undefined') {
-        const completedTours = JSON.parse(
-          localStorage.getItem('maia-completed-tours') || '[]',
-        )
-
-        if (!completedTours.includes('play')) {
-          startTour(tourConfigs.play.id, tourConfigs.play.steps, false)
-        }
-      }
+      // Always attempt to start the tour - the tour context will handle completion checking
+      startTour(tourConfigs.play.id, tourConfigs.play.steps, false)
     }
-  }, [openedModals.againstMaia, initialTourCheck])
+  }, [initialTourCheck, startTour])
 
   useEffect(() => {
     let canceled = false

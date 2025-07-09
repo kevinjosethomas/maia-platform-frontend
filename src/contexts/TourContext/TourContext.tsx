@@ -6,7 +6,6 @@ import React, {
   useMemo,
   memo,
 } from 'react'
-import { tourConfigs } from 'src/config/tours'
 
 export interface TourStep {
   id: string
@@ -82,12 +81,20 @@ export const TourProvider: React.FC<TourProviderProps> = memo(
         }
 
         setTourState((prevState) => {
-          const completedTours = JSON.parse(
-            localStorage.getItem('maia-completed-tours') || '[]',
-          )
+          // Use state first, then localStorage as fallback
+          const stateCompletedTours = prevState.completedTours
+          const localStorageCompletedTours =
+            typeof window !== 'undefined'
+              ? JSON.parse(localStorage.getItem('maia-completed-tours') || '[]')
+              : []
+
+          // Merge state and localStorage, removing duplicates
+          const allCompletedTours = [
+            ...new Set([...stateCompletedTours, ...localStorageCompletedTours]),
+          ]
 
           // If not forcing restart and tour is completed, don't start
-          if (!forceRestart && completedTours.includes(tourId)) {
+          if (!forceRestart && allCompletedTours.includes(tourId)) {
             return prevState
           }
 
@@ -104,7 +111,6 @@ export const TourProvider: React.FC<TourProviderProps> = memo(
           ) {
             return prevState
           }
-
           isStartingTour.current = true
           // Reset the flag after a brief delay to allow the state to update
           setTimeout(() => {
@@ -115,7 +121,7 @@ export const TourProvider: React.FC<TourProviderProps> = memo(
             isActive: true,
             currentStep: 0,
             steps,
-            completedTours: prevState.completedTours, // Use existing state, don't overwrite from localStorage
+            completedTours: allCompletedTours, // Use merged completed tours
             currentTourId: tourId,
           }
         })
@@ -151,7 +157,12 @@ export const TourProvider: React.FC<TourProviderProps> = memo(
       setTourState((prev) => {
         // Mark tour as completed - use the properly tracked tour ID
         const currentTourId = prev.currentTourId || 'analysis' // fallback for safety
-        const completedTours = [...prev.completedTours, currentTourId]
+
+        // Only add to completedTours if not already present
+        const completedTours = prev.completedTours.includes(currentTourId)
+          ? prev.completedTours
+          : [...prev.completedTours, currentTourId]
+
         if (typeof window !== 'undefined') {
           localStorage.setItem(
             'maia-completed-tours',
@@ -174,7 +185,12 @@ export const TourProvider: React.FC<TourProviderProps> = memo(
       setTourState((prev) => {
         // Mark tour as completed when skipped - use the properly tracked tour ID
         const currentTourId = prev.currentTourId || 'analysis' // fallback for safety
-        const completedTours = [...prev.completedTours, currentTourId]
+
+        // Only add to completedTours if not already present
+        const completedTours = prev.completedTours.includes(currentTourId)
+          ? prev.completedTours
+          : [...prev.completedTours, currentTourId]
+
         if (typeof window !== 'undefined') {
           localStorage.setItem(
             'maia-completed-tours',

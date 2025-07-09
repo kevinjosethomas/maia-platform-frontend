@@ -256,7 +256,10 @@ export const GameplayInterface: React.FC<React.PropsWithChildren<Props>> = (
               />
             ) : null}
           </div>
-          <div className="relative flex aspect-square h-[100vw] w-screen">
+          <div
+            id="play-page"
+            className="relative flex aspect-square h-[100vw] w-screen"
+          >
             <GameBoard
               game={game}
               availableMoves={availableMovesMapped}

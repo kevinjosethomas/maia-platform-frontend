@@ -67,9 +67,7 @@ const statsLoader = async () => {
 
 const TrainPage: NextPage = () => {
   const router = useRouter()
-  const { openedModals, setInstructionsModalProps: setInstructionsModalProps } =
-    useContext(ModalContext)
-  const { startTour, hasCompletedTour } = useTour()
+  const { startTour } = useTour()
 
   const [trainingGames, setTrainingGames] = useState<TrainingGame[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -82,27 +80,12 @@ const TrainPage: NextPage = () => {
   const [initialTourCheck, setInitialTourCheck] = useState(false)
 
   useEffect(() => {
-    if (!openedModals.train) {
-      setInstructionsModalProps({ instructionsType: 'train' })
-    }
-    return () => setInstructionsModalProps(undefined)
-  }, [setInstructionsModalProps, openedModals.train])
-
-  useEffect(() => {
-    if (!openedModals.train && !initialTourCheck) {
+    if (!initialTourCheck) {
       setInitialTourCheck(true)
-      // Check if user has completed the tour on initial load only
-      if (typeof window !== 'undefined') {
-        const completedTours = JSON.parse(
-          localStorage.getItem('maia-completed-tours') || '[]',
-        )
-
-        if (!completedTours.includes('train')) {
-          startTour(tourConfigs.train.id, tourConfigs.train.steps, false)
-        }
-      }
+      // Always attempt to start the tour - the tour context will handle completion checking
+      startTour(tourConfigs.train.id, tourConfigs.train.steps, false)
     }
-  }, [openedModals.train, initialTourCheck])
+  }, [initialTourCheck, startTour])
 
   const getNewGame = useCallback(async () => {
     let game
@@ -1138,7 +1121,10 @@ const Train: React.FC<Props> = ({
             </div>
             <StatsDisplay stats={stats} />
             <ContinueAgainstMaia launchContinue={launchContinue} />
-            <div className="flex w-full flex-col gap-1 overflow-hidden">
+            <div
+              id="analysis"
+              className="flex w-full flex-col gap-1 overflow-hidden"
+            >
               <div className="relative">
                 <BlunderMeter
                   hover={showAnalysis ? hover : mockHover}
