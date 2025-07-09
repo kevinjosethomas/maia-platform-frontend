@@ -73,6 +73,7 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
     }
     return []
   })
+  const [hbSubsection, setHbSubsection] = useState<'hand' | 'brain'>('hand')
 
   useEffect(() => {
     setCustomAnalyses(getCustomAnalysesAsWebGames())
@@ -80,7 +81,7 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
 
   useEffect(() => {
     if (currentId?.[0]?.startsWith('custom-')) {
-      setSelected('pgn')
+      setSelected('custom')
     }
   }, [currentId])
 
@@ -90,7 +91,7 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
     play: {},
     hand: {},
     brain: {},
-    pgn: {},
+    lichess: {},
     tournament: {},
   })
 
@@ -104,7 +105,7 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
     play: 1,
     hand: 1,
     brain: 1,
-    pgn: 1,
+    lichess: 1,
     tournament: 1,
   })
 
@@ -127,15 +128,18 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
   }, [analysisTournamentList, currentId, listKeys])
 
   const [selected, setSelected] = useState<
-    'tournament' | 'pgn' | 'play' | 'hand' | 'brain'
+    'tournament' | 'lichess' | 'play' | 'hb' | 'custom'
   >(() => {
     // Check if currentId is a custom game (starts with 'custom-')
     if (currentId?.[0]?.startsWith('custom-')) {
-      return 'pgn' // Custom games are in the pgn/Custom tab
+      return 'custom' // Custom games are in the custom tab
     }
     // Check if it's one of the other specific types
-    if (['pgn', 'play', 'hand', 'brain'].includes(currentId?.[1] ?? '')) {
-      return currentId?.[1] as 'pgn' | 'play' | 'hand' | 'brain'
+    if (['lichess', 'play', 'hand', 'brain'].includes(currentId?.[1] ?? '')) {
+      if (currentId?.[1] === 'hand' || currentId?.[1] === 'brain') {
+        return 'hb'
+      }
+      return currentId?.[1] as 'lichess' | 'play'
     }
 
     return 'tournament'
@@ -151,7 +155,12 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
   }, [selected])
 
   useEffect(() => {
-    if (selected !== 'tournament' && selected !== 'pgn') {
+    if (
+      selected !== 'tournament' &&
+      selected !== 'lichess' &&
+      selected !== 'custom' &&
+      selected !== 'hb'
+    ) {
       const isAlreadyFetched = fetchedCache[selected]?.[currentPage]
 
       if (!isAlreadyFetched) {
@@ -201,14 +210,6 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
               setLocalPlayGames((prev) =>
                 currentPage === 1 ? parsedGames : [...prev, ...parsedGames],
               )
-            } else if (selected === 'hand') {
-              setLocalHandGames((prev) =>
-                currentPage === 1 ? parsedGames : [...prev, ...parsedGames],
-              )
-            } else if (selected === 'brain') {
-              setLocalBrainGames((prev) =>
-                currentPage === 1 ? parsedGames : [...prev, ...parsedGames],
-              )
             }
             setLoading(false)
           })
@@ -224,34 +225,142 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
     }
   }, [selected, currentPage, fetchedCache])
 
+  // Separate useEffect for H&B subsections
   useEffect(() => {
-    if (totalPagesCache[selected]) {
+    if (selected === 'hb') {
+      const gameType = hbSubsection === 'hand' ? 'hand' : 'brain'
+      const isAlreadyFetched = fetchedCache[gameType]?.[currentPage]
+
+      if (!isAlreadyFetched) {
+        setLoading(true)
+
+        setFetchedCache((prev) => ({
+          ...prev,
+          [gameType]: { ...prev[gameType], [currentPage]: true },
+        }))
+
+        getAnalysisGameList(gameType, currentPage)
+          .then((data) => {
+            const parse = (
+              game: {
+                game_id: string
+                maia_name: string
+                result: string
+                player_color: 'white' | 'black'
+              },
+              type: string,
+            ) => {
+              const raw = game.maia_name.replace('_kdd_', ' ')
+              const maia = raw.charAt(0).toUpperCase() + raw.slice(1)
+
+              return {
+                id: game.game_id,
+                label:
+                  game.player_color === 'white'
+                    ? `You vs. ${maia}`
+                    : `${maia} vs. You`,
+                result: game.result,
+                type,
+              }
+            }
+
+            const parsedGames = data.games.map((game: GameData) =>
+              parse(game, gameType),
+            )
+            const calculatedTotalPages = Math.ceil(data.total / 100)
+
+            setTotalPagesCache((prev) => ({
+              ...prev,
+              [gameType]: calculatedTotalPages,
+            }))
+
+            if (gameType === 'hand') {
+              setLocalHandGames((prev) =>
+                currentPage === 1 ? parsedGames : [...prev, ...parsedGames],
+              )
+            } else if (gameType === 'brain') {
+              setLocalBrainGames((prev) =>
+                currentPage === 1 ? parsedGames : [...prev, ...parsedGames],
+              )
+            }
+            setLoading(false)
+          })
+          .catch(() => {
+            setFetchedCache((prev) => {
+              const newCache = { ...prev }
+              delete newCache[gameType][currentPage]
+              return newCache
+            })
+            setLoading(false)
+          })
+      }
+    }
+  }, [selected, hbSubsection, currentPage, fetchedCache])
+
+  useEffect(() => {
+    if (selected === 'hb') {
+      const gameType = hbSubsection === 'hand' ? 'hand' : 'brain'
+      if (totalPagesCache[gameType]) {
+        setTotalPages(totalPagesCache[gameType])
+      }
+      setCurrentPage(currentPagePerTab[gameType])
+    } else if (totalPagesCache[selected]) {
       setTotalPages(totalPagesCache[selected])
-    } else if (selected === 'pgn' || selected === 'tournament') {
+    } else if (
+      selected === 'lichess' ||
+      selected === 'tournament' ||
+      selected === 'custom'
+    ) {
       setTotalPages(1)
     }
 
-    setCurrentPage(currentPagePerTab[selected])
-  }, [selected, totalPagesCache, currentPagePerTab])
+    if (selected !== 'hb') {
+      setCurrentPage(currentPagePerTab[selected])
+    }
+  }, [selected, hbSubsection, totalPagesCache, currentPagePerTab])
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage)
-      setCurrentPagePerTab((prev) => ({
-        ...prev,
-        [selected]: newPage,
-      }))
+      if (selected === 'hb') {
+        const gameType = hbSubsection === 'hand' ? 'hand' : 'brain'
+        setCurrentPagePerTab((prev) => ({
+          ...prev,
+          [gameType]: newPage,
+        }))
+      } else {
+        setCurrentPagePerTab((prev) => ({
+          ...prev,
+          [selected]: newPage,
+        }))
+      }
     }
   }
 
   const handleTabChange = (
-    newTab: 'tournament' | 'play' | 'hand' | 'brain' | 'pgn',
+    newTab: 'tournament' | 'play' | 'hb' | 'custom' | 'lichess',
   ) => {
     setSelected(newTab)
   }
 
+  const getCurrentGames = () => {
+    if (selected === 'play') {
+      return localPlayGames
+    } else if (selected === 'hb') {
+      return hbSubsection === 'hand' ? localHandGames : localBrainGames
+    } else if (selected === 'custom') {
+      return customAnalyses
+    } else if (selected === 'lichess') {
+      return analysisLichessList
+    }
+    return []
+  }
+
   return analysisTournamentList ? (
-    <div className="flex h-full flex-col items-start justify-start overflow-hidden bg-background-1 md:rounded">
+    <div
+      id="analysis-game-list"
+      className="flex h-full flex-col items-start justify-start overflow-hidden bg-background-1 md:rounded"
+    >
       <div className="flex h-full w-full flex-col">
         <div className="grid select-none grid-cols-5 border-b-2 border-white border-opacity-10">
           <Header
@@ -261,20 +370,20 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
             setSelected={handleTabChange}
           />
           <Header
-            label="Hand"
-            name="hand"
-            selected={selected}
-            setSelected={handleTabChange}
-          />
-          <Header
-            label="Brain"
-            name="brain"
+            label="H&B"
+            name="hb"
             selected={selected}
             setSelected={handleTabChange}
           />
           <Header
             label="Custom"
-            name="pgn"
+            name="custom"
+            selected={selected}
+            setSelected={handleTabChange}
+          />
+          <Header
+            label="Lichess"
+            name="lichess"
             selected={selected}
             setSelected={handleTabChange}
           />
@@ -285,6 +394,45 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
             setSelected={handleTabChange}
           />
         </div>
+
+        {/* H&B Subsections */}
+        {selected === 'hb' && (
+          <div className="flex border-b border-white border-opacity-10">
+            <button
+              onClick={() => setHbSubsection('hand')}
+              className={`flex-1 px-3 py-2 text-sm ${
+                hbSubsection === 'hand'
+                  ? 'bg-background-2 text-primary'
+                  : 'bg-background-1/50 text-secondary hover:bg-background-2'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <span className="material-symbols-outlined text-xs">
+                  hand_gesture
+                </span>
+                <span className="text-xs">Hand ({localHandGames.length})</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setHbSubsection('brain')}
+              className={`flex-1 px-3 py-2 text-sm ${
+                hbSubsection === 'brain'
+                  ? 'bg-background-2 text-primary'
+                  : 'bg-background-1/50 text-secondary hover:bg-background-2'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <span className="material-symbols-outlined text-xs">
+                  psychology
+                </span>
+                <span className="text-xs">
+                  Brain ({localBrainGames.length})
+                </span>
+              </div>
+            </button>
+          </div>
+        )}
+
         <div className="red-scrollbar flex h-full flex-col overflow-y-scroll">
           {loading ? (
             <div className="flex h-full items-center justify-center">
@@ -317,14 +465,7 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
                 </>
               ) : (
                 <>
-                  {(selected === 'play'
-                    ? localPlayGames
-                    : selected === 'hand'
-                      ? localHandGames
-                      : selected === 'brain'
-                        ? localBrainGames
-                        : [...customAnalyses, ...analysisLichessList]
-                  ).map((game, index) => {
+                  {getCurrentGames().map((game, index) => {
                     const selectedGame = currentId && currentId[0] === game.id
                     return (
                       <button
@@ -357,9 +498,11 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
                           <p className="text-sm text-secondary">{index + 1}</p>
                         </div>
                         <div className="flex flex-1 items-center justify-between overflow-hidden py-1">
-                          <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-primary">
-                            {game.label}
-                          </p>
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-primary">
+                              {game.label}
+                            </p>
+                          </div>
                           <p className="whitespace-nowrap text-sm font-light text-secondary">
                             {game.result}
                           </p>
@@ -367,49 +510,50 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
                       </button>
                     )
                   })}
-                  {selected !== 'pgn' && totalPages > 1 && (
-                    <div className="flex items-center justify-center gap-2 py-2">
-                      <button
-                        onClick={() => handlePageChange(1)}
-                        disabled={currentPage === 1}
-                        className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
-                      >
-                        <span className="material-symbols-outlined">
-                          first_page
+                  {(selected === 'play' || selected === 'hb') &&
+                    totalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 py-2">
+                        <button
+                          onClick={() => handlePageChange(1)}
+                          disabled={currentPage === 1}
+                          className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined">
+                            first_page
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined">
+                            arrow_back_ios
+                          </span>
+                        </button>
+                        <span className="text-sm text-secondary">
+                          Page {currentPage} of {totalPages}
                         </span>
-                      </button>
-                      <button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
-                      >
-                        <span className="material-symbols-outlined">
-                          arrow_back_ios
-                        </span>
-                      </button>
-                      <span className="text-sm text-secondary">
-                        Page {currentPage} of {totalPages}
-                      </span>
-                      <button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
-                      >
-                        <span className="material-symbols-outlined">
-                          arrow_forward_ios
-                        </span>
-                      </button>
-                      <button
-                        onClick={() => handlePageChange(totalPages)}
-                        disabled={currentPage === totalPages}
-                        className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
-                      >
-                        <span className="material-symbols-outlined">
-                          last_page
-                        </span>
-                      </button>
-                    </div>
-                  )}
+                        <button
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined">
+                            arrow_forward_ios
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => handlePageChange(totalPages)}
+                          disabled={currentPage === totalPages}
+                          className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined">
+                            last_page
+                          </span>
+                        </button>
+                      </div>
+                    )}
                 </>
               )}
             </>
@@ -447,9 +591,11 @@ function Header({
   setSelected,
 }: {
   label: string
-  name: 'tournament' | 'play' | 'hand' | 'brain' | 'pgn'
-  selected: 'tournament' | 'play' | 'hand' | 'brain' | 'pgn'
-  setSelected: (name: 'tournament' | 'play' | 'hand' | 'brain' | 'pgn') => void
+  name: 'tournament' | 'play' | 'hb' | 'custom' | 'lichess'
+  selected: 'tournament' | 'play' | 'hb' | 'custom' | 'lichess'
+  setSelected: (
+    name: 'tournament' | 'play' | 'hb' | 'custom' | 'lichess',
+  ) => void
 }) {
   return (
     <button

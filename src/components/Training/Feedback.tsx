@@ -68,7 +68,24 @@ export const Feedback: React.FC<Props> = ({
     <div className="flex w-screen flex-1 flex-col rounded-sm bg-background-1 p-3 md:w-auto md:p-5 lg:justify-between">
       <div>
         <Markdown>{content.trim()}</Markdown>
+        {(status === 'forfeit' || status === 'correct') && (
+          <div className="mt-4 flex items-start gap-2">
+            <div className="flex items-center gap-0.5">
+              <span className="material-symbols-outlined text-xs text-human-3">
+                arrow_outward
+              </span>
+              <span className="text-xs text-human-3">Most Human Move</span>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <span className="material-symbols-outlined text-xs text-engine-3">
+                arrow_outward
+              </span>
+              <span className="text-xs text-engine-3">Best Engine Move</span>
+            </div>
+          </div>
+        )}
       </div>
+
       <div className="mt-2 flex min-w-32 flex-row gap-1.5 lg:mt-0 lg:flex-col">
         {status !== 'archived' && (
           <>

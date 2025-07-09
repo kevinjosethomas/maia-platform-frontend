@@ -58,7 +58,10 @@ export const HandBrainPlayControls: React.FC<Props> = ({
 
   return (
     <div>
-      <div className="flex flex-col items-center justify-center p-6">
+      <div
+        id="play-controls"
+        className="flex flex-col items-center justify-center p-6"
+      >
         {gameOver ? (
           <>
             {playAgain ? (

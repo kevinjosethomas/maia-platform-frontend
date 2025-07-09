@@ -45,7 +45,7 @@ import { useAnalysisController } from 'src/hooks/useAnalysisController'
 import { AllStats, useStats } from 'src/hooks/useStats'
 import { TrainingGame, Status } from 'src/types/training'
 import { MaiaEvaluation, StockfishEvaluation } from 'src/types'
-import { ModalContext, WindowSizeContext } from 'src/contexts'
+import { ModalContext, WindowSizeContext, useTour } from 'src/contexts'
 import { TrainingControllerContext } from 'src/contexts/TrainingControllerContext'
 import {
   convertTrainingGameToAnalyzedGame,
@@ -54,6 +54,7 @@ import {
   requiresPromotion,
 } from 'src/utils/train/utils'
 import { mockAnalysisData } from 'src/hooks/useAnalysisController/mockData'
+import { tourConfigs } from 'src/config/tours'
 
 const statsLoader = async () => {
   const stats = await getTrainingPlayerStats()
@@ -68,13 +69,7 @@ const TrainPage: NextPage = () => {
   const router = useRouter()
   const { openedModals, setInstructionsModalProps: setInstructionsModalProps } =
     useContext(ModalContext)
-
-  useEffect(() => {
-    if (!openedModals.train) {
-      setInstructionsModalProps({ instructionsType: 'train' })
-    }
-    return () => setInstructionsModalProps(undefined)
-  }, [setInstructionsModalProps, openedModals.train])
+  const { startTour, hasCompletedTour } = useTour()
 
   const [trainingGames, setTrainingGames] = useState<TrainingGame[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -84,6 +79,30 @@ const TrainPage: NextPage = () => {
   const [previousGameResults, setPreviousGameResults] = useState<
     (TrainingGame & { result?: boolean; ratingDiff?: number })[]
   >([])
+  const [initialTourCheck, setInitialTourCheck] = useState(false)
+
+  useEffect(() => {
+    if (!openedModals.train) {
+      setInstructionsModalProps({ instructionsType: 'train' })
+    }
+    return () => setInstructionsModalProps(undefined)
+  }, [setInstructionsModalProps, openedModals.train])
+
+  useEffect(() => {
+    if (!openedModals.train && !initialTourCheck) {
+      setInitialTourCheck(true)
+      // Check if user has completed the tour on initial load only
+      if (typeof window !== 'undefined') {
+        const completedTours = JSON.parse(
+          localStorage.getItem('maia-completed-tours') || '[]',
+        )
+
+        if (!completedTours.includes('train')) {
+          startTour(tourConfigs.train.id, tourConfigs.train.steps, false)
+        }
+      }
+    }
+  }, [openedModals.train, initialTourCheck])
 
   const getNewGame = useCallback(async () => {
     let game
@@ -635,7 +654,10 @@ const Train: React.FC<Props> = ({
           </div>
 
           <div className="flex h-[85vh] w-[45vh] flex-col gap-2 2xl:w-[55vh]">
-            <div className="relative flex aspect-square w-[45vh] 2xl:w-[55vh]">
+            <div
+              id="train-page"
+              className="relative flex aspect-square w-[45vh] 2xl:w-[55vh]"
+            >
               <GameBoard
                 game={trainingGame}
                 currentNode={
@@ -732,6 +754,11 @@ const Train: React.FC<Props> = ({
                   <div className="flex h-full w-auto min-w-[40%] max-w-[40%] border-r-[0.5px] border-white/40">
                     <div className="relative w-full">
                       <Highlight
+                        setCurrentMaiaModel={
+                          showAnalysis
+                            ? analysisController.setCurrentMaiaModel
+                            : () => void 0
+                        }
                         hover={showAnalysis ? hover : mockHover}
                         makeMove={showAnalysis ? makeMove : mockMakeMove}
                         currentMaiaModel={
@@ -801,6 +828,11 @@ const Train: React.FC<Props> = ({
               <div className="flex h-[calc((85vh)*0.3)] overflow-hidden rounded border-[0.5px] border-white/40 bg-background-1 xl:hidden">
                 <div className="flex h-full w-full border-r-[0.5px] border-white/40">
                   <Highlight
+                    setCurrentMaiaModel={
+                      showAnalysis
+                        ? analysisController.setCurrentMaiaModel
+                        : () => void 0
+                    }
                     hover={showAnalysis ? hover : mockHover}
                     makeMove={showAnalysis ? makeMove : mockMakeMove}
                     currentMaiaModel={
@@ -887,6 +919,7 @@ const Train: React.FC<Props> = ({
                     setHoverArrow={
                       showAnalysis ? setHoverArrow : mockSetHoverArrow
                     }
+                    makeMove={showAnalysis ? makeMove : mockMakeMove}
                   />
                 </div>
                 <BlunderMeter
@@ -907,7 +940,7 @@ const Train: React.FC<Props> = ({
 
               {/* Smaller screens (below xl): MoveMap full width */}
               <div className="flex h-[calc((85vh)*0.35)] w-full xl:hidden">
-                <div className="relative h-full w-full">
+                <div className="h-full w-full">
                   <MoveMap
                     moveMap={
                       showAnalysis
@@ -922,24 +955,24 @@ const Train: React.FC<Props> = ({
                     setHoverArrow={
                       showAnalysis ? setHoverArrow : mockSetHoverArrow
                     }
+                    makeMove={showAnalysis ? makeMove : mockMakeMove}
                   />
-                  {!showAnalysis && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded bg-background-1/80 backdrop-blur-sm">
-                      <div className="rounded bg-background-2/90 p-4 text-center shadow-lg">
-                        <span className="material-symbols-outlined mb-2 text-3xl text-human-3">
-                          lock
-                        </span>
-                        <p className="font-medium text-primary">
-                          Analysis Locked
-                        </p>
-                        <p className="text-sm text-secondary">
-                          Complete the puzzle to unlock analysis
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
+
+              {!showAnalysis && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded bg-background-1/80 backdrop-blur-sm">
+                  <div className="rounded bg-background-2/90 p-4 text-center shadow-lg">
+                    <span className="material-symbols-outlined mb-2 text-3xl text-human-3">
+                      lock
+                    </span>
+                    <p className="font-medium text-primary">Analysis Locked</p>
+                    <p className="text-sm text-secondary">
+                      Complete the puzzle to unlock analysis
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Smaller screens (below xl): MovesByRating full width */}
@@ -1002,7 +1035,10 @@ const Train: React.FC<Props> = ({
               </p>
             </GameInfo>
           </div>
-          <div className="relative flex aspect-square h-[100vw] w-screen">
+          <div
+            id="train-page"
+            className="relative flex aspect-square h-[100vw] w-screen"
+          >
             <GameBoard
               game={trainingGame}
               currentNode={
@@ -1118,6 +1154,11 @@ const Train: React.FC<Props> = ({
 
               <div className="relative">
                 <Highlight
+                  setCurrentMaiaModel={
+                    showAnalysis
+                      ? analysisController.setCurrentMaiaModel
+                      : () => void 0
+                  }
                   hover={showAnalysis ? hover : mockHover}
                   makeMove={showAnalysis ? makeMove : mockMakeMove}
                   currentMaiaModel={
@@ -1178,6 +1219,7 @@ const Train: React.FC<Props> = ({
                   setHoverArrow={
                     showAnalysis ? setHoverArrow : mockSetHoverArrow
                   }
+                  makeMove={showAnalysis ? makeMove : mockMakeMove}
                 />
                 {!showAnalysis && (
                   <div className="absolute inset-0 z-10 flex items-center justify-center bg-background-1/80 backdrop-blur-sm">

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useContext } from 'react'
 import { AuthContext } from 'src/contexts'
 import { AnalysisWebGame } from 'src/types'
 import { getLichessGames, getAnalysisGameList } from 'src/api'
+import { getCustomAnalysesAsWebGames } from 'src/utils/customAnalysis'
 
 interface GameData {
   game_id: string
@@ -14,13 +15,20 @@ interface GameData {
 
 export const GameList = () => {
   const { user } = useContext(AuthContext)
-  const [selected, setSelected] = useState<'play' | 'hand' | 'brain' | 'pgn'>(
-    'play',
-  )
+  const [selected, setSelected] = useState<
+    'play' | 'hb' | 'custom' | 'lichess'
+  >('play')
+  const [hbSubsection, setHbSubsection] = useState<'hand' | 'brain'>('hand')
   const [games, setGames] = useState<AnalysisWebGame[]>([])
   const [playGames, setPlayGames] = useState<AnalysisWebGame[]>([])
   const [handGames, setHandGames] = useState<AnalysisWebGame[]>([])
   const [brainGames, setBrainGames] = useState<AnalysisWebGame[]>([])
+  const [customAnalyses, setCustomAnalyses] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return getCustomAnalysesAsWebGames()
+    }
+    return []
+  })
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -31,7 +39,7 @@ export const GameList = () => {
     play: {},
     hand: {},
     brain: {},
-    pgn: {},
+    lichess: {},
   })
 
   const [totalPagesCache, setTotalPagesCache] = useState<{
@@ -44,14 +52,19 @@ export const GameList = () => {
     play: 1,
     hand: 1,
     brain: 1,
-    pgn: 1,
+    lichess: 1,
   })
 
+  // Update custom analyses when component mounts
   useEffect(() => {
-    if (user?.lichessId && !fetchedCache.pgn[1]) {
+    setCustomAnalyses(getCustomAnalysesAsWebGames())
+  }, [])
+
+  useEffect(() => {
+    if (user?.lichessId && !fetchedCache.lichess[1]) {
       setFetchedCache((prev) => ({
         ...prev,
-        pgn: { ...prev.pgn, 1: true },
+        lichess: { ...prev.lichess, 1: true },
       }))
 
       getLichessGames(user?.lichessId, (data) => {
@@ -67,21 +80,22 @@ export const GameList = () => {
         setGames((x) => [...x, game])
       })
     }
-  }, [user?.lichessId, fetchedCache.pgn])
+  }, [user?.lichessId, fetchedCache.lichess])
 
   useEffect(() => {
-    if (user?.lichessId && selected !== 'pgn') {
-      const isAlreadyFetched = fetchedCache[selected]?.[currentPage]
+    if (user?.lichessId && selected !== 'lichess' && selected !== 'custom') {
+      const gameType = selected === 'hb' ? hbSubsection : selected
+      const isAlreadyFetched = fetchedCache[gameType]?.[currentPage]
 
       if (!isAlreadyFetched) {
         setLoading(true)
 
         setFetchedCache((prev) => ({
           ...prev,
-          [selected]: { ...prev[selected], [currentPage]: true },
+          [gameType]: { ...prev[gameType], [currentPage]: true },
         }))
 
-        getAnalysisGameList(selected, currentPage)
+        getAnalysisGameList(gameType, currentPage)
           .then((data) => {
             const parse = (
               game: {
@@ -107,24 +121,24 @@ export const GameList = () => {
             }
 
             const parsedGames = data.games.map((game: GameData) =>
-              parse(game, selected),
+              parse(game, gameType),
             )
             const calculatedTotalPages = Math.ceil(data.total / 100)
 
             setTotalPagesCache((prev) => ({
               ...prev,
-              [selected]: calculatedTotalPages,
+              [gameType]: calculatedTotalPages,
             }))
 
-            if (selected === 'play') {
+            if (gameType === 'play') {
               setPlayGames((prev) =>
                 currentPage === 1 ? parsedGames : [...prev, ...parsedGames],
               )
-            } else if (selected === 'hand') {
+            } else if (gameType === 'hand') {
               setHandGames((prev) =>
                 currentPage === 1 ? parsedGames : [...prev, ...parsedGames],
               )
-            } else if (selected === 'brain') {
+            } else if (gameType === 'brain') {
               setBrainGames((prev) =>
                 currentPage === 1 ? parsedGames : [...prev, ...parsedGames],
               )
@@ -135,37 +149,66 @@ export const GameList = () => {
           .catch(() => {
             setFetchedCache((prev) => {
               const newCache = { ...prev }
-              delete newCache[selected][currentPage]
+              delete newCache[gameType][currentPage]
               return newCache
             })
             setLoading(false)
           })
       }
     }
-  }, [user?.lichessId, selected, currentPage, fetchedCache])
+  }, [user?.lichessId, selected, hbSubsection, currentPage, fetchedCache])
 
   useEffect(() => {
-    if (totalPagesCache[selected]) {
+    if (selected === 'hb') {
+      const gameType = hbSubsection
+      if (totalPagesCache[gameType]) {
+        setTotalPages(totalPagesCache[gameType])
+      }
+      setCurrentPage(currentPagePerTab[gameType])
+    } else if (totalPagesCache[selected]) {
       setTotalPages(totalPagesCache[selected])
-    } else if (selected === 'pgn') {
+    } else if (selected === 'lichess' || selected === 'custom') {
       setTotalPages(1)
     }
 
-    setCurrentPage(currentPagePerTab[selected])
-  }, [selected, totalPagesCache, currentPagePerTab])
+    if (selected !== 'hb') {
+      setCurrentPage(currentPagePerTab[selected])
+    }
+  }, [selected, hbSubsection, totalPagesCache, currentPagePerTab])
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage)
-      setCurrentPagePerTab((prev) => ({
-        ...prev,
-        [selected]: newPage,
-      }))
+      if (selected === 'hb') {
+        const gameType = hbSubsection
+        setCurrentPagePerTab((prev) => ({
+          ...prev,
+          [gameType]: newPage,
+        }))
+      } else {
+        setCurrentPagePerTab((prev) => ({
+          ...prev,
+          [selected]: newPage,
+        }))
+      }
     }
   }
 
-  const handleTabChange = (newTab: 'play' | 'hand' | 'brain' | 'pgn') => {
+  const handleTabChange = (newTab: 'play' | 'hb' | 'custom' | 'lichess') => {
     setSelected(newTab)
+  }
+
+  const getCurrentGames = () => {
+    if (selected === 'play') {
+      return playGames
+    } else if (selected === 'hb') {
+      return hbSubsection === 'hand' ? handGames : brainGames
+    } else if (selected === 'custom') {
+      return customAnalyses
+    } else if (selected === 'lichess') {
+      return games
+    }
+    return []
   }
 
   return (
@@ -181,106 +224,140 @@ export const GameList = () => {
           setSelected={handleTabChange}
         />
         <Header
-          label="Hand"
-          name="hand"
+          label="H&B"
+          name="hb"
           selected={selected}
           setSelected={handleTabChange}
         />
         <Header
-          label="Brain"
-          name="brain"
+          label="Custom"
+          name="custom"
           selected={selected}
           setSelected={handleTabChange}
         />
         <Header
           label="Lichess"
-          name="pgn"
+          name="lichess"
           selected={selected}
           setSelected={handleTabChange}
         />
       </div>
-      <div className="red-scrollbar flex max-h-64 flex-col overflow-y-scroll md:max-h-[60vh]">
+
+      {/* H&B Subsections */}
+      {selected === 'hb' && (
+        <div className="flex border-b border-white border-opacity-10">
+          <button
+            onClick={() => setHbSubsection('hand')}
+            className={`flex-1 px-3 py-1.5 text-sm ${
+              hbSubsection === 'hand'
+                ? 'bg-background-2 text-primary'
+                : 'bg-background-1/50 text-secondary hover:bg-background-2'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <span className="material-symbols-outlined text-xs">
+                hand_gesture
+              </span>
+              <span className="text-xs">Hand ({handGames.length})</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setHbSubsection('brain')}
+            className={`flex-1 px-3 py-1.5 text-sm ${
+              hbSubsection === 'brain'
+                ? 'bg-background-2 text-primary'
+                : 'bg-background-1/50 text-secondary hover:bg-background-2'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <span className="material-symbols-outlined text-xs">
+                psychology
+              </span>
+              <span className="text-xs">Brain ({brainGames.length})</span>
+            </div>
+          </button>
+        </div>
+      )}
+
+      <div className="red-scrollbar flex max-h-64 flex-col overflow-y-scroll md:max-h-96">
         {loading ? (
-          <div className="flex h-full items-center justify-center">
+          <div className="flex h-full items-center justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-white"></div>
           </div>
         ) : (
           <>
-            {(selected === 'play'
-              ? playGames
-              : selected === 'hand'
-                ? handGames
-                : selected === 'brain'
-                  ? brainGames
-                  : games
-            ).map((game, index) => (
+            {getCurrentGames().map((game, index) => (
               <a
                 key={index}
-                href={`/analysis/${game.id}/${selected}`}
-                className={`group flex w-full cursor-pointer items-center gap-2 pr-1 ${index % 2 === 0 ? 'bg-background-1/30' : 'bg-background-1/10'} hover:bg-background-2`}
+                href={`/analysis/${game.id}/${game.type}`}
+                className={`group flex w-full cursor-pointer items-center gap-2 pr-2 ${
+                  index % 2 === 0
+                    ? 'bg-background-1/30 hover:bg-background-2'
+                    : 'bg-background-1/10 hover:bg-background-2'
+                }`}
               >
-                <div className="flex h-full w-9 items-center justify-center bg-background-2 py-1 group-hover:bg-white/5">
+                <div className="flex h-full w-10 items-center justify-center bg-background-2 py-1 group-hover:bg-white/5">
                   <p className="text-sm text-secondary">{index + 1}</p>
                 </div>
                 <div className="flex flex-1 items-center justify-between overflow-hidden py-1">
-                  <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-primary">
-                    {game.label}
-                  </p>
-                  <p className="whitespace-nowrap text-sm font-light text-secondary">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    {selected === 'hb' && (
+                      <span className="material-symbols-outlined text-sm text-secondary">
+                        {hbSubsection === 'hand'
+                          ? 'hand_gesture'
+                          : 'psychology'}
+                      </span>
+                    )}
+                    <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-primary">
+                      {game.label}
+                    </p>
+                  </div>
+                  <p className="whitespace-nowrap text-sm text-secondary">
                     {game.result}
                   </p>
                 </div>
               </a>
             ))}
-            {selected !== 'pgn' && totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 py-2">
-                <button
-                  onClick={() => handlePageChange(1)}
-                  disabled={currentPage === 1}
-                  className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined">first_page</span>
-                </button>
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined">
-                    arrow_back_ios
-                  </span>
-                </button>
-                <span className="text-sm text-secondary">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined">
-                    arrow_forward_ios
-                  </span>
-                </button>
-                <button
-                  onClick={() => handlePageChange(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined">last_page</span>
-                </button>
-              </div>
-            )}
           </>
         )}
-        <div className="flex flex-1 items-start justify-center gap-1 py-2 md:items-center">
-          <span className="material-symbols-outlined text-sm text-secondary">
-            chess_pawn
-          </span>
-          <p className="text-xs text-secondary">Play more games...</p>
-          <p className="ml-2 text-xs text-secondary">₍^. .^₎⟆</p>
-        </div>
       </div>
+
+      {/* Pagination */}
+      {(selected === 'play' || selected === 'hb') && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 border-t border-white border-opacity-10 bg-background-1 py-2">
+          <button
+            onClick={() => handlePageChange(1)}
+            disabled={currentPage === 1}
+            className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined">first_page</span>
+          </button>
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined">arrow_back_ios</span>
+          </button>
+          <span className="text-sm text-secondary">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined">arrow_forward_ios</span>
+          </button>
+          <button
+            onClick={() => handlePageChange(totalPages)}
+            disabled={currentPage === totalPages}
+            className="flex items-center justify-center text-secondary hover:text-primary disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined">last_page</span>
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -292,23 +369,31 @@ function Header({
   setSelected,
 }: {
   label: string
-  name: 'play' | 'hand' | 'brain' | 'pgn'
-  selected: 'play' | 'hand' | 'brain' | 'pgn'
-  setSelected: (name: 'play' | 'hand' | 'brain' | 'pgn') => void
+  name: 'play' | 'hb' | 'custom' | 'lichess'
+  selected: 'play' | 'hb' | 'custom' | 'lichess'
+  setSelected: (name: 'play' | 'hb' | 'custom' | 'lichess') => void
 }) {
   return (
     <button
       onClick={() => setSelected(name)}
-      className={`relative flex items-center justify-center md:py-1 ${selected === name ? 'bg-human-4/30' : 'bg-background-1/80 hover:bg-background-2'} `}
+      className={`relative flex items-center justify-center py-0.5 ${
+        selected === name
+          ? 'bg-human-4/30'
+          : 'bg-background-1/80 hover:bg-background-2'
+      } transition duration-200`}
     >
-      <div className="flex items-center justify-start">
+      <div className="flex items-center justify-start gap-1">
         <p
-          className={`text-xs transition duration-200 ${selected === name ? 'text-human-2' : 'text-primary'}`}
+          className={`text-sm transition duration-200 ${
+            selected === name ? 'text-human-2' : 'text-primary'
+          }`}
         >
           {label}
         </p>
         <i
-          className={`material-symbols-outlined text-base transition duration-200 ${selected === name ? 'text-human-2/80' : 'text-primary/80'}`}
+          className={`material-symbols-outlined text-base transition duration-200 ${
+            selected === name ? 'text-human-2/80' : 'text-primary/80'
+          }`}
         >
           keyboard_arrow_down
         </i>

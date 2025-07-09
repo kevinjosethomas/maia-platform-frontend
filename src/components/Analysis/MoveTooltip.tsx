@@ -29,7 +29,7 @@ export const MoveTooltip: React.FC<MoveTooltipProps> = ({
 
   return (
     <div
-      className="pointer-events-none fixed z-50 rounded border border-background-2 bg-backdrop shadow-lg"
+      className="pointer-events-none fixed z-50 flex w-auto min-w-[12rem] flex-col overflow-hidden rounded-lg border border-white/30 bg-background-1 backdrop-blur-sm"
       style={{
         left: position.x + 15,
         top: position.y - 10,
@@ -38,18 +38,18 @@ export const MoveTooltip: React.FC<MoveTooltipProps> = ({
       }}
     >
       {/* Header */}
-      <div className="flex items-center bg-backdrop px-3 py-1.5">
+      <div className="flex w-full justify-between border-b border-white/20 bg-gradient-to-r from-background-2/90 to-background-2/70 px-3 py-1.5">
         <span style={{ color }} className="font-medium">
           {san}
         </span>
       </div>
 
       {/* Content */}
-      <div className="flex flex-col items-start justify-start gap-1 bg-background-1/80 px-3 py-1.5 text-sm">
+      <div className="flex flex-col items-start justify-start gap-1 bg-gradient-to-b from-background-1 to-background-1/90 px-3 py-1.5 text-sm">
         {/* Maia Probability */}
         {maiaProb !== undefined && (
           <div className="flex w-full items-center justify-between gap-2 font-mono">
-            <span className="text-human-3">Maia:</span>
+            <span className="font-medium text-human-2">Maia:</span>
             <span>{(Math.round(maiaProb * 1000) / 10).toFixed(1)}%</span>
           </div>
         )}
@@ -57,7 +57,7 @@ export const MoveTooltip: React.FC<MoveTooltipProps> = ({
         {/* Stockfish Evaluation */}
         {stockfishCp !== undefined && (
           <div className="flex w-full items-center justify-between gap-2 font-mono">
-            <span className="text-engine-3">SF Eval:</span>
+            <span className="font-medium text-engine-2">SF Eval:</span>
             <span>
               {stockfishCp > 0 ? '+' : ''}
               {(stockfishCp / 100).toFixed(2)}
@@ -68,7 +68,7 @@ export const MoveTooltip: React.FC<MoveTooltipProps> = ({
         {/* Stockfish Win Rate */}
         {stockfishWinrate !== undefined && (
           <div className="flex w-full items-center justify-between gap-2 font-mono">
-            <span className="text-engine-3">SF Winrate:</span>
+            <span className="font-medium text-engine-2">SF Winrate:</span>
             <span>{(stockfishWinrate * 100).toFixed(1)}%</span>
           </div>
         )}
@@ -76,7 +76,7 @@ export const MoveTooltip: React.FC<MoveTooltipProps> = ({
         {/* Stockfish Loss */}
         {stockfishLoss !== undefined && (
           <div className="flex w-full items-center justify-between gap-2 font-mono">
-            <span className="text-engine-3">SF Loss:</span>
+            <span className="font-medium text-engine-2">SF Loss:</span>
             <span>
               {stockfishLoss > 0 ? '+' : ''}
               {stockfishLoss.toFixed(2)}

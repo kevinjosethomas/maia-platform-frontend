@@ -23,11 +23,16 @@ export const useStockfishEngine = () => {
     engineRef.current?.stopEvaluation()
   }, [])
 
+  const isReady = useCallback(() => {
+    return engineRef.current?.ready ?? false
+  }, [])
+
   return useMemo(
     () => ({
       streamEvaluations,
       stopEvaluation,
+      isReady,
     }),
-    [streamEvaluations, stopEvaluation],
+    [streamEvaluations, stopEvaluation, isReady],
   )
 }

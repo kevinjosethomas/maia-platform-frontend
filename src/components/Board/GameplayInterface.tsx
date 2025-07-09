@@ -182,7 +182,10 @@ export const GameplayInterface: React.FC<React.PropsWithChildren<Props>> = (
               <StatsDisplay stats={stats} hideSession={true} />
             </div>
           </div>
-          <div className="relative flex aspect-square w-full max-w-[75vh]">
+          <div
+            id="play-page"
+            className="relative flex aspect-square w-full max-w-[75vh]"
+          >
             <GameBoard
               game={game}
               availableMoves={availableMovesMapped}

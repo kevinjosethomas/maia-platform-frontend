@@ -31,9 +31,10 @@ const MOCK_COLOR_SAN_MAPPING: Partial<ColorSanMapping> = {
   e4: { san: 'e4', color: COLORS.good[0] },
   d4: { san: 'd4', color: COLORS.good[1] },
   Nf3: { san: 'Nf3', color: COLORS.ok[0] },
-  c4: { san: 'c4', color: COLORS.ok[1] },
-  g3: { san: 'g3', color: COLORS.blunder[0] },
 }
+
+// Only include moves that have data in MOCK_MOVES_BY_RATING
+const MOVES_WITH_DATA = ['e4', 'd4', 'Nf3'] as const
 
 interface MovesByRatingData {
   rating: number
@@ -170,6 +171,41 @@ export const SimplifiedMovesByRating = () => {
             tickLine={false}
             tickFormatter={(value) => `${value}%`}
           />
+          <defs>
+            {MOVES_WITH_DATA.map((move) => (
+              <linearGradient
+                key={`color${move}`}
+                id={`color${move}`}
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                <stop
+                  offset="5%"
+                  stopColor={getColorForMove(move)}
+                  stopOpacity={0.5}
+                />
+                <stop
+                  offset="95%"
+                  stopColor={getColorForMove(move)}
+                  stopOpacity={0}
+                />
+              </linearGradient>
+            ))}
+          </defs>
+          {MOVES_WITH_DATA.map((move, index) => (
+            <Area
+              key={move}
+              yAxisId="left"
+              dataKey={move}
+              stroke={getColorForMove(move)}
+              fill={`url(#color${move})`}
+              strokeWidth={3}
+              name={getSanForMove(move)}
+              animationDuration={300}
+            />
+          ))}
           <Tooltip
             content={({ payload }) => {
               return (
@@ -228,45 +264,8 @@ export const SimplifiedMovesByRating = () => {
               fontSize: 14,
             }}
             iconSize={0}
+            formatter={(value) => getSanForMove(value)}
           />
-          {Object.keys(MOCK_COLOR_SAN_MAPPING).map((move, index) => (
-            <motion.g
-              key={move}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
-            >
-              <Area
-                yAxisId="left"
-                dataKey={move}
-                stroke={getColorForMove(move)}
-                fill={`url(#color${move})`}
-                strokeWidth={3}
-                name={getSanForMove(move)}
-              >
-                <defs>
-                  <linearGradient
-                    id={`color${move}`}
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop
-                      offset="5%"
-                      stopColor={getColorForMove(move)}
-                      stopOpacity={0.5}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor={getColorForMove(move)}
-                      stopOpacity={0}
-                    />
-                  </linearGradient>
-                </defs>
-              </Area>
-            </motion.g>
-          ))}
         </AreaChart>
       </ResponsiveContainer>
     </div>

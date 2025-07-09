@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Chessground from '@react-chess/chessground'
 import type { DrawShape } from 'chessground/draw'
 import type { Key } from 'chessground/types'
@@ -159,6 +159,105 @@ const PUZZLES: ChessPuzzle[] = [
   },
 ]
 
+// Responsive chessboard component for TrainSection
+const ResponsiveTrainChessboard = ({
+  puzzle,
+  shapes,
+  forceKey,
+}: {
+  puzzle: ChessPuzzle
+  shapes: DrawShape[]
+  forceKey: number
+}) => {
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const stableKey = `train-chess-${puzzle.id}-${forceKey}-${windowSize.width}-${windowSize.height}`
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      })
+    }
+
+    handleResize()
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative w-full"
+      style={{
+        transform: 'translateZ(0)',
+        aspectRatio: '1/1',
+      }}
+    >
+      <div
+        className="h-full w-full"
+        style={{
+          position: 'relative',
+          transform: 'translateZ(0)',
+        }}
+      >
+        <Chessground
+          key={stableKey}
+          contained
+          config={{
+            fen: puzzle.fen,
+            viewOnly: true,
+            coordinates: true,
+            drawable: {
+              enabled: true,
+              visible: true,
+              defaultSnapToValidMove: true,
+              shapes,
+              brushes: {
+                green: {
+                  key: 'g',
+                  color: '#15781B',
+                  opacity: 1,
+                  lineWidth: 10,
+                },
+                red: {
+                  key: 'r',
+                  color: '#882020',
+                  opacity: 1,
+                  lineWidth: 10,
+                },
+                blue: {
+                  key: 'b',
+                  color: '#003088',
+                  opacity: 1,
+                  lineWidth: 10,
+                },
+                yellow: {
+                  key: 'y',
+                  color: '#e68f00',
+                  opacity: 1,
+                  lineWidth: 10,
+                },
+              },
+            },
+            highlight: {
+              lastMove: true,
+              check: true,
+            },
+            animation: {
+              duration: 0,
+            },
+            disableContextMenu: true,
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
 export const TrainSection = ({ id }: TrainSectionProps) => {
   const [ref, inView] = useInView({
     triggerOnce: false,
@@ -237,8 +336,6 @@ export const TrainSection = ({ id }: TrainSectionProps) => {
 
   const puzzle = PUZZLES[currentPuzzle]
 
-  const stableKey = `board-${currentPuzzle}-${renderKey}-${windowSize.width}-${windowSize.height}`
-
   return (
     <section
       id={id}
@@ -311,70 +408,18 @@ export const TrainSection = ({ id }: TrainSectionProps) => {
             </div>
             <div className="flex flex-col gap-4 p-4 md:flex-row">
               <div className="flex w-full justify-center md:w-1/2">
-                <div
-                  className="relative w-full"
+                <motion.div
+                  className="w-full"
                   style={{
-                    aspectRatio: '1/1',
                     transform: 'translateZ(0)',
                   }}
                 >
-                  <motion.div
-                    className="h-full w-full"
-                    style={{
-                      position: 'relative',
-                      transform: 'translateZ(0)',
-                    }}
-                  >
-                    <Chessground
-                      key={stableKey}
-                      contained
-                      config={{
-                        fen: puzzle.fen,
-                        viewOnly: true,
-                        coordinates: true,
-                        drawable: {
-                          enabled: true,
-                          visible: true,
-                          defaultSnapToValidMove: true,
-                          shapes,
-                          brushes: {
-                            green: {
-                              key: 'g',
-                              color: '#15781B',
-                              opacity: 1,
-                              lineWidth: 10,
-                            },
-                            red: {
-                              key: 'r',
-                              color: '#882020',
-                              opacity: 1,
-                              lineWidth: 10,
-                            },
-                            blue: {
-                              key: 'b',
-                              color: '#003088',
-                              opacity: 1,
-                              lineWidth: 10,
-                            },
-                            yellow: {
-                              key: 'y',
-                              color: '#e68f00',
-                              opacity: 1,
-                              lineWidth: 10,
-                            },
-                          },
-                        },
-                        highlight: {
-                          lastMove: true,
-                          check: true,
-                        },
-                        animation: {
-                          duration: 0,
-                        },
-                      }}
-                    />{' '}
-                  </motion.div>
-                </div>
+                  <ResponsiveTrainChessboard
+                    puzzle={puzzle}
+                    shapes={shapes}
+                    forceKey={renderKey}
+                  />
+                </motion.div>
               </div>
               <div className="flex w-full flex-col md:w-1/2">
                 <motion.div

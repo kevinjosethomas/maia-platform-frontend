@@ -1,11 +1,10 @@
-import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react'
+import React, { useMemo, useCallback, useEffect, useRef } from 'react'
 import { Highlight, MoveMap, BlunderMeter, MovesByRating } from '../Analysis'
 import { GameNode } from 'src/types'
 import { GameTree } from 'src/types/base/tree'
-import { Chess, PieceSymbol } from 'chess.ts'
-import type { Key } from 'chessground/types'
 import type { DrawShape } from 'chessground/draw'
 import toast from 'react-hot-toast'
+import { useAnalysisController } from 'src/hooks/useAnalysisController'
 
 interface Props {
   currentNode: GameNode | null
@@ -14,9 +13,10 @@ interface Props {
   onToggleAnalysis: () => void
   playerColor: 'white' | 'black'
   maiaVersion: string
-  analysisController: any // Analysis controller passed from parent
+  analysisController: ReturnType<typeof useAnalysisController>
   hover: (move?: string) => void
   setHoverArrow: React.Dispatch<React.SetStateAction<DrawShape | null>>
+  makeMove: (move: string) => void
 }
 
 export const OpeningDrillAnalysis: React.FC<Props> = ({
@@ -29,6 +29,7 @@ export const OpeningDrillAnalysis: React.FC<Props> = ({
   analysisController,
   hover: parentHover,
   setHoverArrow: parentSetHoverArrow,
+  makeMove: parentMakeMove,
 }) => {
   const toastId = useRef<string | null>(null)
 
@@ -67,44 +68,9 @@ export const OpeningDrillAnalysis: React.FC<Props> = ({
 
   const makeMove = useCallback(
     (move: string) => {
-      if (!analysisEnabled || !currentNode || !gameTree) return
-
-      const chess = new Chess(currentNode.fen)
-      const moveAttempt = chess.move({
-        from: move.slice(0, 2),
-        to: move.slice(2, 4),
-        promotion: move[4] ? (move[4] as PieceSymbol) : undefined,
-      })
-
-      if (moveAttempt) {
-        const newFen = chess.fen()
-        const moveString =
-          moveAttempt.from +
-          moveAttempt.to +
-          (moveAttempt.promotion ? moveAttempt.promotion : '')
-        const san = moveAttempt.san
-
-        // For opening drills, always update the main line instead of creating variations
-        // If the move already exists as the main child, just navigate to it
-        if (currentNode.mainChild?.move === moveString) {
-          analysisController.goToNode(currentNode.mainChild)
-        } else {
-          // Remove any existing children first to replace the main line from this point forward
-          currentNode.removeAllChildren()
-
-          // Create new main line continuation
-          const newNode = gameTree.addMainMove(
-            currentNode,
-            newFen,
-            moveString,
-            san,
-            analysisController.currentMaiaModel,
-          )
-          analysisController.goToNode(newNode)
-        }
-      }
+      parentMakeMove(move)
     },
-    [analysisEnabled, currentNode, gameTree, analysisController],
+    [parentMakeMove],
   )
 
   // No-op handlers for blurred analysis components when disabled
@@ -169,6 +135,7 @@ export const OpeningDrillAnalysis: React.FC<Props> = ({
             <div className="flex h-full w-auto min-w-[40%] max-w-[40%] border-r-[0.5px] border-white/40">
               <div className="relative w-full">
                 <Highlight
+                  setCurrentMaiaModel={analysisController.setCurrentMaiaModel}
                   hover={analysisEnabled ? hover : mockHover}
                   makeMove={analysisEnabled ? makeMove : mockMakeMove}
                   currentMaiaModel={analysisController.currentMaiaModel}
@@ -232,6 +199,7 @@ export const OpeningDrillAnalysis: React.FC<Props> = ({
               setHoverArrow={
                 analysisEnabled ? parentSetHoverArrow : mockSetHoverArrow
               }
+              makeMove={analysisEnabled ? makeMove : mockMakeMove}
             />
           </div>
           <BlunderMeter
@@ -269,6 +237,7 @@ export const OpeningDrillAnalysis: React.FC<Props> = ({
           <div className="flex h-full w-full border-r-[0.5px] border-white/40">
             <div className="relative w-full">
               <Highlight
+                setCurrentMaiaModel={analysisController.setCurrentMaiaModel}
                 hover={analysisEnabled ? hover : mockHover}
                 makeMove={analysisEnabled ? makeMove : mockMakeMove}
                 currentMaiaModel={analysisController.currentMaiaModel}
@@ -340,6 +309,7 @@ export const OpeningDrillAnalysis: React.FC<Props> = ({
               setHoverArrow={
                 analysisEnabled ? parentSetHoverArrow : mockSetHoverArrow
               }
+              makeMove={analysisEnabled ? makeMove : mockMakeMove}
             />
           </div>
           {!analysisEnabled && (

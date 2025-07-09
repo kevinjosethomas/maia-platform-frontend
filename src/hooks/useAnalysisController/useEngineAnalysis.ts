@@ -31,6 +31,7 @@ export const useEngineAnalysis = (
   maia: { batchEvaluate: EngineHooks['maia']['batchEvaluate'] },
   streamEvaluations: EngineHooks['streamEvaluations'],
   stopEvaluation: EngineHooks['stopEvaluation'],
+  isStockfishReady: () => boolean,
   currentMaiaModel: string,
   setAnalysisState: React.Dispatch<React.SetStateAction<number>>,
 ) => {
@@ -63,14 +64,27 @@ export const useEngineAnalysis = (
     const board = new Chess(currentNode.fen)
     const nodeFen = currentNode.fen
 
-    ;(async () => {
+    const attemptMaiaAnalysis = async () => {
       if (
         !currentNode ||
-        maiaStatus !== 'ready' ||
         currentNode.analysis.maia ||
         inProgressAnalyses.has(nodeFen)
       )
         return
+
+      // Add retry logic for Maia initialization
+      let retries = 0
+      const maxRetries = 30 // 3 seconds with 100ms intervals
+
+      while (retries < maxRetries && maiaStatus !== 'ready') {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        retries++
+      }
+
+      if (maiaStatus !== 'ready') {
+        console.warn('Maia not ready after waiting, skipping analysis')
+        return
+      }
 
       inProgressAnalyses.add(nodeFen)
 
@@ -110,7 +124,9 @@ export const useEngineAnalysis = (
       } finally {
         inProgressAnalyses.delete(nodeFen)
       }
-    })()
+    }
+
+    attemptMaiaAnalysis()
   }, [
     maiaStatus,
     currentNode,
@@ -129,23 +145,42 @@ export const useEngineAnalysis = (
     )
       return
 
-    const evaluationStream = streamEvaluations(
-      board.fen(),
-      board.moves().length,
-    )
+    // Add retry logic for Stockfish initialization
+    const attemptStockfishAnalysis = async () => {
+      // Wait up to 3 seconds for Stockfish to be ready
+      let retries = 0
+      const maxRetries = 30 // 3 seconds with 100ms intervals
 
-    if (evaluationStream) {
-      ;(async () => {
-        for await (const evaluation of evaluationStream) {
-          if (!currentNode) {
-            stopEvaluation()
-            break
+      while (retries < maxRetries && !isStockfishReady()) {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        retries++
+      }
+
+      if (!isStockfishReady()) {
+        console.warn('Stockfish not ready after waiting, skipping analysis')
+        return
+      }
+
+      const evaluationStream = streamEvaluations(
+        board.fen(),
+        board.moves().length,
+      )
+
+      if (evaluationStream) {
+        ;(async () => {
+          for await (const evaluation of evaluationStream) {
+            if (!currentNode) {
+              stopEvaluation()
+              break
+            }
+            currentNode.addStockfishAnalysis(evaluation, currentMaiaModel)
+            setAnalysisState((state) => state + 1)
           }
-          currentNode.addStockfishAnalysis(evaluation, currentMaiaModel)
-          setAnalysisState((state) => state + 1)
-        }
-      })()
+        })()
+      }
     }
+
+    attemptStockfishAnalysis()
 
     return () => {
       stopEvaluation()
@@ -154,6 +189,7 @@ export const useEngineAnalysis = (
     currentNode,
     streamEvaluations,
     stopEvaluation,
+    isStockfishReady,
     currentMaiaModel,
     setAnalysisState,
   ])

@@ -9,6 +9,8 @@ import {
   DrillConfiguration,
 } from 'src/types'
 import { ModalContainer } from '../Misc/ModalContainer'
+import { useTour } from 'src/contexts'
+import { tourConfigs } from 'src/config/tours'
 
 const MAIA_VERSIONS = [
   { id: 'maia_kdd_1100', name: 'Maia 1100' },
@@ -103,6 +105,7 @@ const BrowsePanel: React.FC<{
   setSearchTerm,
 }) => (
   <div
+    id="opening-drill-browse"
     className={`flex w-full flex-col overflow-y-scroll ${activeTab !== 'browse' ? 'hidden md:flex' : 'flex'} md:border-r md:border-white/10`}
   >
     <div className="hidden h-20 flex-col justify-center gap-1 border-b border-white/10 p-4 md:flex">
@@ -288,6 +291,7 @@ const PreviewPanel: React.FC<{
   isDuplicateSelection,
 }) => (
   <div
+    id="opening-drill-preview"
     className={`flex w-full flex-col overflow-hidden ${activeTab !== 'preview' ? 'hidden md:flex' : 'flex'}`}
   >
     <div className="hidden h-20 flex-col justify-center gap-1 border-b border-white/10 p-4 md:flex">
@@ -441,6 +445,7 @@ const SelectedPanel: React.FC<{
   handleStartDrilling,
 }) => (
   <div
+    id="opening-drill-selected"
     className={`flex w-full flex-col overflow-hidden ${activeTab !== 'selected' ? 'hidden md:flex' : 'flex'} md:border-l md:border-white/10`}
   >
     <div className="hidden h-20 flex-col justify-center gap-1 border-b border-white/10 p-4 md:flex">
@@ -570,6 +575,7 @@ export const OpeningSelectionModal: React.FC<Props> = ({
   onComplete,
   onClose,
 }) => {
+  const { startTour } = useTour()
   const [selections, setSelections] =
     useState<OpeningSelection[]>(initialSelections)
   const [previewOpening, setPreviewOpening] = useState<Opening>(openings[0])
@@ -583,6 +589,31 @@ export const OpeningSelectionModal: React.FC<Props> = ({
   const [drillCount, setDrillCount] = useState(5)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState<MobileTab>('browse')
+  const [initialTourCheck, setInitialTourCheck] = useState(false)
+
+  // Check if user has completed the tour on initial load
+  useEffect(() => {
+    if (!initialTourCheck) {
+      setInitialTourCheck(true)
+      if (typeof window !== 'undefined') {
+        const completedTours = JSON.parse(
+          localStorage.getItem('maia-completed-tours') || '[]',
+        )
+
+        if (!completedTours.includes('openingDrill')) {
+          startTour(
+            tourConfigs.openingDrill.id,
+            tourConfigs.openingDrill.steps,
+            false,
+          )
+        }
+      }
+    }
+  }, [initialTourCheck, startTour])
+
+  const handleStartTour = () => {
+    startTour(tourConfigs.openingDrill.id, tourConfigs.openingDrill.steps, true)
+  }
 
   const previewFen = useMemo(() => {
     return previewVariation ? previewVariation.fen : previewOpening.fen
@@ -717,14 +748,32 @@ export const OpeningSelectionModal: React.FC<Props> = ({
         </button>
 
         {/* Header Section */}
-        <div className="flex w-full flex-col gap-1 border-b border-white/10 p-4">
-          <h1 className="text-xl font-bold text-primary md:text-2xl">
-            Opening Drills
-          </h1>
-          <p className="text-xs text-secondary md:text-sm">
-            Practice openings against Maia. Select openings to drill, choose
-            your color and opponent strength.
-          </p>
+        <div
+          id="opening-drill-modal"
+          className="flex w-full flex-col gap-1 border-b border-white/10 p-4"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-row items-center gap-3">
+                <h1 className="text-xl font-bold text-primary md:text-2xl">
+                  Opening Drills
+                </h1>
+                <button
+                  type="button"
+                  className="material-symbols-outlined text-lg text-secondary duration-200 hover:text-human-3 focus:outline-none"
+                  onClick={handleStartTour}
+                  title="Start tour"
+                >
+                  help
+                </button>
+              </div>
+
+              <p className="text-xs text-secondary md:text-sm">
+                Practice openings against Maia. Select openings to drill, choose
+                your color and opponent strength.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Mobile Tab Navigation */}

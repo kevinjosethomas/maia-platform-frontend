@@ -1,13 +1,14 @@
 import { startGame } from 'src/api'
 import { NextPage } from 'next/types'
 import { useRouter } from 'next/router'
-import { ModalContext } from 'src/contexts'
-import { useContext, useEffect, useMemo } from 'react'
+import { ModalContext, useTour } from 'src/contexts'
+import { useContext, useEffect, useMemo, useState } from 'react'
 import { Loading, PlayControls } from 'src/components'
 import { Color, TimeControl, PlayGameConfig } from 'src/types'
 import { GameplayInterface } from 'src/components/Board/GameplayInterface'
 import { useVsMaiaPlayController } from 'src/hooks/usePlayController/useVsMaiaController'
 import { PlayControllerContext } from 'src/contexts/PlayControllerContext/PlayControllerContext'
+import { tourConfigs } from 'src/config/tours'
 
 interface Props {
   id: string
@@ -45,20 +46,22 @@ const PlayMaia: React.FC<Props> = ({
   return (
     <PlayControllerContext.Provider value={controller}>
       <GameplayInterface>
-        <PlayControls
-          game={controller.game}
-          playerActive={controller.playerActive}
-          gameOver={!!controller.game.termination}
-          resign={
-            controller.playerActive
-              ? () => {
-                  controller.updateClock()
-                  controller.setResigned(true)
-                }
-              : undefined
-          }
-          playAgain={playAgain}
-        />
+        <div id="play-controls">
+          <PlayControls
+            game={controller.game}
+            playerActive={controller.playerActive}
+            gameOver={!!controller.game.termination}
+            resign={
+              controller.playerActive
+                ? () => {
+                    controller.updateClock()
+                    controller.setResigned(true)
+                  }
+                : undefined
+            }
+            playAgain={playAgain}
+          />
+        </div>
       </GameplayInterface>
     </PlayControllerContext.Provider>
   )
@@ -67,6 +70,8 @@ const PlayMaia: React.FC<Props> = ({
 const PlayMaiaPage: NextPage = () => {
   const { openedModals, setInstructionsModalProps: setInstructionsModalProps } =
     useContext(ModalContext)
+  const { startTour, hasCompletedTour } = useTour()
+  const [initialTourCheck, setInitialTourCheck] = useState(false)
 
   useEffect(() => {
     if (!openedModals.againstMaia) {
@@ -111,6 +116,22 @@ const PlayMaiaPage: NextPage = () => {
       timeControl,
     ],
   )
+
+  useEffect(() => {
+    if (!openedModals.againstMaia && !initialTourCheck) {
+      setInitialTourCheck(true)
+      // Check if user has completed the tour on initial load only
+      if (typeof window !== 'undefined') {
+        const completedTours = JSON.parse(
+          localStorage.getItem('maia-completed-tours') || '[]',
+        )
+
+        if (!completedTours.includes('play')) {
+          startTour(tourConfigs.play.id, tourConfigs.play.steps, false)
+        }
+      }
+    }
+  }, [openedModals.againstMaia, initialTourCheck])
 
   useEffect(() => {
     let canceled = false

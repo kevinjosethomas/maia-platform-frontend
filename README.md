@@ -132,6 +132,77 @@ A key feature of the platform is its ability to run both Stockfish and Maia dire
 
 These hooks are consumed by higher-level controller hooks (like `useAnalysisController`) to provide the dual-engine analysis that powers many of the platform's features.
 
+## Contributing Guidelines
+
+Before contributing to the Maia Chess Platform, please review these guidelines to ensure consistency and quality.
+
+### Code Style and Formatting
+
+The project uses automated code formatting and linting to maintain consistency:
+
+- **ESLint**: Configured with Next.js, TypeScript, and Prettier integration
+- **Prettier**: Enforces consistent formatting with the following settings:
+  - No semicolons (`semi: false`)
+  - Single quotes (`singleQuote: true`)
+  - 2-space indentation (`tabWidth: 2`)
+  - Automatic Tailwind CSS class sorting
+
+### Development Workflow
+
+1. **Setup**: Install recommended VS Code extensions for optimal development experience:
+
+   - `dbaeumer.vscode-eslint`
+   - `esbenp.prettier-vscode`
+   - `silvenon.mdx`
+
+2. **Code Quality**: Run linting before committing:
+   ```bash
+   npm run lint
+   ```
+
+### Code Conventions
+
+- **File Naming**:
+
+  - Components: PascalCase (e.g., `GameBoard.tsx`)
+  - Hooks: camelCase with `use` prefix (e.g., `useLocalStorage.ts`)
+  - Utilities: camelCase (e.g., `customAnalysis.ts`)
+
+- **Import Patterns**:
+
+  - Use absolute imports: `import { buildUrl } from 'src/api'`
+  - Leverage barrel exports through `index.ts` files
+
+- **Component Organization**: Components are organized by feature in `src/components/`
+
+### Technical Clarifications
+
+#### Stockfish Evaluation Perspective
+
+**Important**: Stockfish evaluations are processed to be **from the perspective of whoever is playing the next move**, not from White's perspective.
+
+- **Stockfish's raw output**: Always from White's perspective (positive = good for White, negative = good for Black)
+- **Platform processing**: Converts to current player's perspective (positive = good for current player)
+- **Implementation**: When it's Black's turn, the centipawn value is multiplied by -1
+
+This ensures consistent interpretation where positive values always represent an advantage for the player whose turn it is. The conversion logic is documented in `src/hooks/useStockfishEngine/engine.ts:138-155`.
+
+#### State Management Architecture
+
+The platform uses a Context + Custom Hooks pattern:
+
+1. **Controller Hooks**: Business logic encapsulated in hooks (e.g., `useAnalysisController`, `usePlayController`)
+2. **Context Providers**: State distribution via React Context (e.g., `AuthContext`, `ModalContext`)
+3. **Components**: Presentation layer consuming contexts
+
+This architecture separates concerns and avoids prop drilling while maintaining clean component interfaces.
+
+#### API Patterns
+
+- **Base URL**: All API calls use `/api/v1/` prefix
+- **Organization**: Feature-based modules in `src/api/`
+- **Pattern**: Each module exports functions through barrel exports
+
 ## Deployment
 
 The Maia Chess Platform is deployed on [Vercel](https://vercel.com/). The `main` branch is automatically built and deployed to the production URL. Pull requests also generate unique preview deployments, allowing for easy testing and review before merging.

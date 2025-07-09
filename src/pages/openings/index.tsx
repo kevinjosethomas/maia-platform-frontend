@@ -347,6 +347,48 @@ const OpeningsPage: NextPage = () => {
     // No special handling needed for opening drills
   }, [])
 
+  // Make move function for analysis components
+  const makeMove = useCallback(
+    async (move: string) => {
+      if (
+        !controller.analysisEnabled ||
+        !analysisController.currentNode ||
+        !analyzedGame?.tree
+      )
+        return
+
+      const chess = new Chess(analysisController.currentNode.fen)
+      const moveAttempt = chess.move({
+        from: move.slice(0, 2),
+        to: move.slice(2, 4),
+        promotion: move[4] ? (move[4] as PieceSymbol) : undefined,
+      })
+
+      if (moveAttempt) {
+        const newFen = chess.fen()
+        const moveString =
+          moveAttempt.from +
+          moveAttempt.to +
+          (moveAttempt.promotion ? moveAttempt.promotion : '')
+        const san = moveAttempt.san
+
+        if (analysisController.currentNode.mainChild?.move === moveString) {
+          analysisController.goToNode(analysisController.currentNode.mainChild)
+        } else {
+          const newVariation = analyzedGame.tree.addVariation(
+            analysisController.currentNode,
+            newFen,
+            moveString,
+            san,
+            analysisController.currentMaiaModel,
+          )
+          analysisController.goToNode(newVariation)
+        }
+      }
+    },
+    [controller.analysisEnabled, analysisController, analyzedGame],
+  )
+
   // Show download modal if Maia model needs to be downloaded
   if (
     analysisController.maiaStatus === 'no-cache' ||
@@ -457,7 +499,7 @@ const OpeningsPage: NextPage = () => {
             <PlayerInfo name={topPlayer.name} color={topPlayer.color} />
             <div className="relative flex aspect-square w-[45vh] 2xl:w-[55vh]">
               <GameBoard
-                currentNode={controller.currentNode!}
+                currentNode={controller.currentNode}
                 orientation={controller.orientation}
                 availableMoves={controller.moves}
                 onPlayerMakeMove={onPlayerMakeMove}
@@ -466,13 +508,17 @@ const OpeningsPage: NextPage = () => {
               />
               {promotionFromTo && (
                 <PromotionOverlay
-                  player={getCurrentPlayer(controller.currentNode!)}
+                  player={getCurrentPlayer(controller.currentNode)}
                   file={promotionFromTo[1].slice(0, 1)}
                   onPlayerSelectPromotion={onPlayerSelectPromotion}
                 />
               )}
             </div>
-            <PlayerInfo name={bottomPlayer.name} color={bottomPlayer.color} />
+            <PlayerInfo
+              name={bottomPlayer.name}
+              color={bottomPlayer.color}
+              showArrowLegend={controller.analysisEnabled}
+            />
           </div>
 
           {/* Drill progress with next drill button */}
@@ -542,6 +588,7 @@ const OpeningsPage: NextPage = () => {
             analysisController={analysisController}
             hover={hover}
             setHoverArrow={setHoverArrow}
+            makeMove={makeMove}
           />
         </div>
       </div>
@@ -555,7 +602,7 @@ const OpeningsPage: NextPage = () => {
         <PlayerInfo name={topPlayer.name} color={topPlayer.color} />
         <div className="relative flex aspect-square h-[100vw] w-screen">
           <GameBoard
-            currentNode={controller.currentNode!}
+            currentNode={controller.currentNode}
             orientation={controller.orientation}
             availableMoves={controller.moves}
             onPlayerMakeMove={onPlayerMakeMove}
@@ -564,13 +611,17 @@ const OpeningsPage: NextPage = () => {
           />
           {promotionFromTo && (
             <PromotionOverlay
-              player={getCurrentPlayer(controller.currentNode!)}
+              player={getCurrentPlayer(controller.currentNode)}
               file={promotionFromTo[1].slice(0, 1)}
               onPlayerSelectPromotion={onPlayerSelectPromotion}
             />
           )}
         </div>
-        <PlayerInfo name={bottomPlayer.name} color={bottomPlayer.color} />
+        <PlayerInfo
+          name={bottomPlayer.name}
+          color={bottomPlayer.color}
+          showArrowLegend={controller.analysisEnabled}
+        />
       </div>
 
       <div className="flex h-auto w-full flex-col gap-1">
@@ -674,7 +725,7 @@ const OpeningsPage: NextPage = () => {
                   Analyzing Your Performance
                 </h3>
                 <p className="text-sm text-secondary">
-                  Running deep analysis with Stockfish and Maia...
+                  Running analysis with Stockfish and Maia...
                 </p>
               </div>
             </div>

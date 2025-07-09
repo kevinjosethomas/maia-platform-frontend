@@ -172,14 +172,14 @@ export const useOpeningDrillController = (
         controller.setCurrentNode(currentDrillGame.tree.getRoot())
       }
     }
-  }, [currentDrillGame?.id, controller])
+  }, [currentDrillGame?.id])
 
   // Set board orientation based on player color
   useEffect(() => {
     if (currentDrill?.playerColor) {
       controller.setOrientation(currentDrill.playerColor)
     }
-  }, [currentDrill?.playerColor, controller])
+  }, [currentDrill?.playerColor])
 
   // Determine if it's the player's turn
   const isPlayerTurn = useMemo(() => {
@@ -739,7 +739,8 @@ export const useOpeningDrillController = (
 
           // Check if drill is complete after this move (only if not in continue analyzing mode)
           if (
-            updatedGame.playerMoveCount >= currentDrill!.targetMoveNumber &&
+            currentDrill &&
+            updatedGame.playerMoveCount >= currentDrill.targetMoveNumber &&
             !continueAnalyzingMode
           ) {
             // Delay completion to allow for Maia's response if it's Maia's turn

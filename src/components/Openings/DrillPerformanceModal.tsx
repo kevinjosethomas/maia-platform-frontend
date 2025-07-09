@@ -27,6 +27,25 @@ interface Props {
   isLastDrill: boolean
 }
 
+// Helper function to extract move number from FEN string
+const getMoveNumberFromFen = (fen: string): number => {
+  const fenParts = fen.split(' ')
+  return parseInt(fenParts[5]) || 1 // 6th part is the full move number
+}
+
+// Helper function to determine if a move is white's or black's based on FEN
+// Note: this tells us who is TO MOVE in this position, not who just moved
+const isWhiteToMove = (fen: string): boolean => {
+  const fenParts = fen.split(' ')
+  return fenParts[1] === 'w' // 2nd part is active color
+}
+
+// Helper function to determine if a move was played by white or black
+// This is the inverse of who is to move after the move
+const isMoveByWhite = (fen: string): boolean => {
+  return !isWhiteToMove(fen) // If white is to move, then black just moved
+}
+
 // Component for animated game replay
 const AnimatedGameReplay: React.FC<{
   moveAnalyses: MoveAnalysis[]
@@ -202,20 +221,59 @@ const AnimatedGameReplay: React.FC<{
     return '' // Normal moves get no classification
   }
 
-  // Helper function to pair moves for display
+  // Helper function to pair moves for display with proper chess notation
   const pairMoves = (moves: MoveAnalysis[]) => {
     const pairs: Array<{
-      white?: MoveAnalysis & { index: number }
-      black?: MoveAnalysis & { index: number }
+      white?: MoveAnalysis & {
+        index: number
+        displayMoveNumber: number
+        isWhiteMove: boolean
+      }
+      black?: MoveAnalysis & {
+        index: number
+        displayMoveNumber: number
+        isWhiteMove: boolean
+      }
+      moveNumber: number
     }> = []
 
-    for (let i = 0; i < moves.length; i += 2) {
-      const white = moves[i] ? { ...moves[i], index: i } : undefined
-      const black = moves[i + 1] ? { ...moves[i + 1], index: i + 1 } : undefined
-      pairs.push({ white, black })
-    }
+    if (moves.length === 0) return pairs
 
-    return pairs
+    let currentMoveNumber = getMoveNumberFromFen(moves[0].fen)
+    for (let i = 0; i < moves.length; i++) {
+      const move = moves[i]
+      const isWhite = isMoveByWhite(move.fen)
+      // For white's move, increment move number
+      if (isWhite) {
+        currentMoveNumber = getMoveNumberFromFen(move.fen)
+        let pair = pairs.find((p) => p.moveNumber === currentMoveNumber)
+        if (!pair) {
+          pair = { moveNumber: currentMoveNumber }
+          pairs.push(pair)
+        }
+        pair.white = {
+          ...move,
+          index: i,
+          displayMoveNumber: currentMoveNumber,
+          isWhiteMove: true,
+        }
+      } else {
+        // For black's move, use the same move number as the previous white move
+        let pair = pairs.find((p) => p.moveNumber === currentMoveNumber)
+        if (!pair) {
+          pair = { moveNumber: currentMoveNumber }
+          pairs.push(pair)
+        }
+        pair.black = {
+          ...move,
+          index: i,
+          displayMoveNumber: currentMoveNumber,
+          isWhiteMove: false,
+        }
+      }
+    }
+    // Sort pairs by move number to ensure proper chronological order
+    return pairs.sort((a, b) => a.moveNumber - b.moveNumber)
   }
 
   // Get arrows for optimal moves from the current position (before next move is played)
@@ -267,7 +325,7 @@ const AnimatedGameReplay: React.FC<{
   return (
     <div className="flex h-full flex-col">
       {/* Game Replay Section with padding */}
-      <div className="p-4">
+      <div className="relative p-4">
         <div>
           <h3 className="mb-1 text-lg font-semibold">Game Replay</h3>
           <p className="mb-3 text-sm text-secondary">
@@ -275,8 +333,22 @@ const AnimatedGameReplay: React.FC<{
           </p>
         </div>
 
+        {/* Move Quality Display - Fixed position in top-right */}
+        {currentMoveQuality && currentMoveQuality !== 'good' && (
+          <div className="absolute right-4 top-4 z-10 flex rounded border border-white/20 bg-background-1/95 px-2 py-1 shadow-lg">
+            <div
+              className={`font-mono text-sm font-bold ${getQualityColor(currentMoveQuality)}`}
+            >
+              {getQualitySymbol(currentMoveQuality)}
+            </div>
+            <div className="ml-2 text-sm capitalize text-secondary">
+              {currentMoveQuality}
+            </div>
+          </div>
+        )}
+
         {/* Chess Board */}
-        <div className="relative mx-auto aspect-square w-full max-w-[280px]">
+        <div className="mx-auto aspect-square w-full max-w-[280px]">
           <Chessground
             contained
             config={{
@@ -307,20 +379,6 @@ const AnimatedGameReplay: React.FC<{
               },
             }}
           />
-
-          {/* Move Quality Overlay */}
-          {currentMoveQuality && (
-            <div className="absolute right-2 top-2 z-50 rounded border border-white/20 bg-background-1/95 px-2 py-1 shadow-lg">
-              <div
-                className={`font-mono text-sm font-bold ${getQualityColor(currentMoveQuality)}`}
-              >
-                {getQualitySymbol(currentMoveQuality)}
-              </div>
-              <div className="text-xs capitalize text-secondary">
-                {currentMoveQuality}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -329,10 +387,10 @@ const AnimatedGameReplay: React.FC<{
         <div className="red-scrollbar flex-1 overflow-y-auto">
           <div className="grid auto-rows-min grid-cols-5 whitespace-nowrap rounded-none bg-background-1/60">
             {pairMoves(moveAnalyses).map((pair, index) => (
-              <React.Fragment key={index}>
+              <React.Fragment key={pair.moveNumber}>
                 {/* Move number */}
                 <span className="flex h-7 items-center justify-center bg-background-2 text-sm text-secondary">
-                  {index + 1}
+                  {pair.moveNumber}
                 </span>
 
                 {/* White's move */}
@@ -418,7 +476,16 @@ const AnimatedGameReplay: React.FC<{
 }
 
 // Custom dot component for move quality indicators
-const CustomDot: React.FC<any> = (props) => {
+const CustomDot: React.FC<{
+  cx?: number
+  cy?: number
+  payload?: {
+    isPlayerMove: boolean
+    classification: string
+    isCurrentMove: boolean
+  }
+  index?: number
+}> = (props) => {
   const { cx, cy, payload, index } = props
   if (!payload) return null
 
@@ -449,11 +516,16 @@ const CustomDot: React.FC<any> = (props) => {
       radius = 3
   }
 
-  const strokeColor =
-    classification === 'excellent' || classification === 'blunder'
+  if (isCurrentMove) {
+    radius = Math.max(radius + 2, 6)
+  }
+
+  const strokeColor = isCurrentMove
+    ? '#ffffff'
+    : classification === 'excellent' || classification === 'blunder'
       ? '#ffffff'
       : '#1f2937'
-  const strokeWidth = 0.5
+  const strokeWidth = isCurrentMove ? 2 : 0.5
 
   return (
     <Dot
@@ -468,14 +540,30 @@ const CustomDot: React.FC<any> = (props) => {
 }
 
 // Custom tooltip component
-const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
+const CustomTooltip: React.FC<{
+  active?: boolean
+  payload?: Array<{
+    payload: {
+      san?: string
+      evaluation: number
+      classification?: string
+      isPlayerMove: boolean
+      moveNumber: number
+    }
+  }>
+  label?: string
+  moveAnalyses: MoveAnalysis[]
+}> = ({ active, payload, label, moveAnalyses }) => {
   if (!active || !payload || !payload[0]) return null
 
   const data = payload[0].payload
-  const plyNumber = parseInt(label as string)
-  const moveNumber = Math.ceil(plyNumber / 2)
-  const isWhiteMove = plyNumber % 2 === 1
-  const moveNotation = isWhiteMove ? `${moveNumber}.` : `...${moveNumber}.`
+  const moveNumber = data.moveNumber
+
+  // Determine if this was a white or black move
+  // We need to look at the corresponding move analysis to get the FEN
+  const moveAnalysis = moveAnalyses.find((m) => m.san === data.san)
+  const isWhiteMove = moveAnalysis ? isMoveByWhite(moveAnalysis.fen) : true
+  const moveNotation = `${moveNumber}.`
 
   const formatEvaluation = (evaluation: number) => {
     if (Math.abs(evaluation) >= 1000) {
@@ -536,7 +624,7 @@ const EvaluationChart: React.FC<{
     )
   }
 
-  // Classify move based on evaluationLoss (same logic as in AnimatedGameReplay)
+  // Classify move based on winrate loss (using proper winrate calculation)
   const classifyMove = (analysis: MoveAnalysis, moveIndex: number): string => {
     // Need evaluation before and after the move to calculate winrate change
     if (moveIndex === 0) return '' // Can't calculate for first move
@@ -583,27 +671,26 @@ const EvaluationChart: React.FC<{
     return '' // Normal moves get no classification
   }
 
-  // Transform data for Recharts with proper area handling at zero crossings
+  // Generate move numbers for chartData: increment only after Black's move
+  let moveNumber = getMoveNumberFromFen(moveAnalyses[0]?.fen || '1 w - - 0 1')
   const chartData = evaluationChart.map((point, index) => {
-    // Find corresponding move analysis to get SAN notation and proper classification
     const moveAnalysis = moveAnalyses[index]
-
-    // Use dynamic classification based on winrate loss
+    const isWhite = moveAnalysis ? isMoveByWhite(moveAnalysis.fen) : true
+    if (isWhite && index !== 0) {
+      moveNumber++
+    }
     const dynamicClassification = moveAnalysis
       ? classifyMove(moveAnalysis, index)
       : ''
-
     return {
-      moveNumber: index + 1,
+      moveNumber: isWhite ? moveNumber : `...${moveNumber}`,
       evaluation: point.evaluation,
       isPlayerMove: point.isPlayerMove,
-      classification: dynamicClassification, // Use dynamic classification
+      classification: dynamicClassification,
       isCurrentMove: index === currentMoveIndex,
       san: moveAnalysis?.san || '',
-      // Areas extend from zero line to evaluation (no gaps)
       whiteAdvantage: point.evaluation > 0 ? point.evaluation : 0,
       blackAdvantage: point.evaluation < 0 ? point.evaluation : 0,
-      // Add zero baseline for proper area rendering
       zero: 0,
     }
   })
@@ -639,9 +726,13 @@ const EvaluationChart: React.FC<{
             data={chartData}
             margin={{ top: 15, right: 20, left: -20, bottom: 20 }}
             onMouseMove={(data) => {
-              if (data && data.activeLabel && onHoverMove) {
-                const moveIndex = parseInt(data.activeLabel as string) - 1
-                onHoverMove(moveIndex)
+              if (
+                data &&
+                data.activeTooltipIndex !== undefined &&
+                onHoverMove
+              ) {
+                // Use the chartData index directly, which matches moveAnalyses index
+                onHoverMove(data.activeTooltipIndex)
               }
             }}
           >
@@ -653,8 +744,9 @@ const EvaluationChart: React.FC<{
               dataKey="moveNumber"
               stroke="#9ca3af"
               fontSize={11}
+              tickFormatter={(value) => value}
               label={{
-                value: 'Ply Number',
+                value: 'Move Number',
                 position: 'insideBottom',
                 style: {
                   textAnchor: 'middle',
@@ -680,7 +772,7 @@ const EvaluationChart: React.FC<{
                 },
               }}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip moveAnalyses={moveAnalyses} />} />
 
             {/* White advantage area (positive evaluations only) */}
             <Area
@@ -748,30 +840,41 @@ const KeyMomentsAnalysis: React.FC<{
   evaluationChart: DrillPerformanceData['evaluationChart']
   playerColor: 'white' | 'black'
 }> = ({ moveAnalyses, evaluationChart, playerColor }) => {
-  // Classify move based on winrate loss (same logic as other components)
+  // Classify move based on winrate loss (using proper winrate calculation)
   const classifyMove = (analysis: MoveAnalysis, moveIndex: number): string => {
-    if (moveIndex === 0) return ''
+    // Need evaluation before and after the move to calculate winrate change
+    if (moveIndex === 0) return '' // Can't calculate for first move
 
     const currentEval = analysis.evaluation
     const previousEval = moveAnalyses[moveIndex - 1]?.evaluation
 
     if (currentEval === undefined || previousEval === undefined) return ''
 
+    // Convert evaluations to winrates (assuming evaluations are already in centipawns)
     const currentWinrate = cpToWinrate(currentEval)
     const previousWinrate = cpToWinrate(previousEval)
 
-    if (!analysis.isPlayerMove) return ''
-
+    // Calculate winrate change from player's perspective
     let winrateChange: number
-    if (playerColor === 'white') {
-      winrateChange = currentWinrate - previousWinrate
+
+    if (analysis.isPlayerMove) {
+      // For player moves, we need to consider which color they're playing
+      if (playerColor === 'white') {
+        // Higher evaluation is better for white
+        winrateChange = currentWinrate - previousWinrate
+      } else {
+        // Lower evaluation is better for black
+        winrateChange = previousWinrate - currentWinrate
+      }
     } else {
-      winrateChange = previousWinrate - currentWinrate
+      // For opponent (Maia) moves, we don't classify them
+      return ''
     }
 
-    const BLUNDER_THRESHOLD = 0.1
-    const INACCURACY_THRESHOLD = 0.05
-    const EXCELLENT_THRESHOLD = 0.08
+    // Use more reasonable thresholds - excellent moves should be rare
+    const BLUNDER_THRESHOLD = 0.1 // 10% winrate drop - significant mistake
+    const INACCURACY_THRESHOLD = 0.05 // 5% winrate drop - noticeable error
+    const EXCELLENT_THRESHOLD = 0.08 // 8% winrate gain - very good move
 
     if (winrateChange <= -BLUNDER_THRESHOLD) {
       return 'blunder'
@@ -781,16 +884,61 @@ const KeyMomentsAnalysis: React.FC<{
       return 'excellent'
     }
 
-    return ''
+    return '' // Normal moves get no classification
+  }
+
+  // Helper function to get proper move number for a given move analysis index
+  const getMoveNumberForIndex = (
+    index: number,
+  ): { moveNumber: number; isWhiteMove: boolean } => {
+    if (index < 0 || index >= moveAnalyses.length)
+      return { moveNumber: 1, isWhiteMove: true }
+
+    const moveAnalysis = moveAnalyses[index]
+    if (!moveAnalysis) return { moveNumber: 1, isWhiteMove: true }
+
+    // Use the same logic as the moves container
+    const isWhiteMove = isMoveByWhite(moveAnalysis.fen)
+
+    let moveNumber = 1 // Default fallback
+    if (isWhiteMove) {
+      // For white moves, get the move number from the FEN (which represents position after the move)
+      moveNumber = getMoveNumberFromFen(moveAnalysis.fen)
+    } else {
+      // For black moves, we need to find the previous white move's move number
+      // Look backwards to find the most recent white move
+      let currentIndex = index - 1
+      let foundPreviousWhite = false
+      while (currentIndex >= 0) {
+        const prevMove = moveAnalyses[currentIndex]
+        if (isMoveByWhite(prevMove.fen)) {
+          // Found the previous white move, use its move number
+          moveNumber = getMoveNumberFromFen(prevMove.fen)
+          foundPreviousWhite = true
+          break
+        }
+        currentIndex--
+      }
+      // If no previous white move found, use the current move's FEN but subtract 1
+      if (!foundPreviousWhite) {
+        moveNumber = getMoveNumberFromFen(moveAnalysis.fen) - 1
+      }
+    }
+
+    return { moveNumber, isWhiteMove }
   }
 
   // Find engine agreement moments (where user matched Stockfish exactly)
   const engineAgreements = moveAnalyses
-    .map((analysis, index) => ({
-      ...analysis,
-      index,
-      plyNumber: index + 1,
-    }))
+    .map((analysis, index) => {
+      const moveInfo = getMoveNumberForIndex(index)
+      return {
+        ...analysis,
+        index,
+        moveNumber: moveInfo.moveNumber,
+        isWhiteMove: moveInfo.isWhiteMove,
+      }
+    })
     .filter(
       (analysis) =>
         analysis.isPlayerMove &&
@@ -807,9 +955,11 @@ const KeyMomentsAnalysis: React.FC<{
         point.evaluation - evaluationChart[index - 1].evaluation,
       )
       const moveAnalysis = moveAnalyses[index]
+      const moveInfo = getMoveNumberForIndex(index)
       return {
         index,
-        plyNumber: index + 1,
+        moveNumber: moveInfo.moveNumber,
+        isWhiteMove: moveInfo.isWhiteMove,
         evalChange,
         moveAnalysis,
         isPlayerMove: point.isPlayerMove,
@@ -855,7 +1005,10 @@ const KeyMomentsAnalysis: React.FC<{
               >
                 <div>
                   <span className="text-base font-medium">
-                    {agreement.plyNumber}. {agreement.san}
+                    {agreement.isWhiteMove
+                      ? `${agreement.moveNumber}.`
+                      : `...${agreement.moveNumber}.`}{' '}
+                    {agreement.san}
                   </span>
                   <p className="text-sm text-secondary">
                     {agreement.classification === 'excellent' && (
@@ -876,9 +1029,7 @@ const KeyMomentsAnalysis: React.FC<{
       {/* Critical Moments Section */}
       {criticalMoments.length > 0 && (
         <div>
-          <h3 className="mb-1 text-lg font-semibold text-human-3">
-            Critical Decisions
-          </h3>
+          <h3 className="mb-1 text-lg font-semibold">Critical Decisions</h3>
           <p className="mb-3 text-sm text-secondary">
             Key moments that shifted the evaluation
           </p>
@@ -890,29 +1041,38 @@ const KeyMomentsAnalysis: React.FC<{
               >
                 <div>
                   <span className="text-base font-medium">
-                    {moment.plyNumber}. {moment.moveAnalysis?.san}
+                    {moment.isWhiteMove
+                      ? `${moment.moveNumber}.`
+                      : `...${moment.moveNumber}.`}{' '}
+                    {moment.moveAnalysis?.san}
+                    <span className="ml-2">
+                      {(() => {
+                        const dynamicClassification = moment.moveAnalysis
+                          ? classifyMove(moment.moveAnalysis, moment.index)
+                          : ''
+
+                        if (dynamicClassification === 'blunder') {
+                          return (
+                            <span className="font-bold text-red-400">?? </span>
+                          )
+                        } else if (dynamicClassification === 'excellent') {
+                          return (
+                            <span className="font-bold text-green-400">
+                              !!{' '}
+                            </span>
+                          )
+                        } else if (dynamicClassification === 'inaccuracy') {
+                          return (
+                            <span className="font-bold text-yellow-400">
+                              ?!{' '}
+                            </span>
+                          )
+                        }
+                        return null
+                      })()}
+                    </span>
                   </span>
                   <p className="text-sm text-secondary">
-                    {(() => {
-                      const dynamicClassification = moment.moveAnalysis
-                        ? classifyMove(moment.moveAnalysis, moment.index)
-                        : ''
-
-                      if (dynamicClassification === 'blunder') {
-                        return (
-                          <span className="font-bold text-red-400">?? </span>
-                        )
-                      } else if (dynamicClassification === 'excellent') {
-                        return (
-                          <span className="font-bold text-green-400">!! </span>
-                        )
-                      } else if (dynamicClassification === 'inaccuracy') {
-                        return (
-                          <span className="font-bold text-yellow-400">?! </span>
-                        )
-                      }
-                      return null
-                    })()}
                     Evaluation swing: {(moment.evalChange / 100).toFixed(1)}
                   </p>
                 </div>
@@ -947,17 +1107,72 @@ export const DrillPerformanceModal: React.FC<Props> = ({
 }) => {
   const [currentMoveIndex, setCurrentMoveIndex] = useState(-1)
   const [hoveredMoveIndex, setHoveredMoveIndex] = useState<number | null>(null)
+  const [isClicked, setIsClicked] = useState(false)
 
   const { drill, evaluationChart, moveAnalyses } = performanceData
 
-  // Handle hover on chart - update board position
-  const handleChartHover = (moveIndex: number) => {
-    setHoveredMoveIndex(moveIndex)
+  // Filter out pre-loaded opening moves - only show moves after the opening sequence
+  const filteredMoveAnalyses = useMemo(() => {
+    // Find the index of the first actual gameplay move (first player move)
+    const firstPlayerMoveIndex = moveAnalyses.findIndex(
+      (move) => move.isPlayerMove,
+    )
+
+    if (firstPlayerMoveIndex === -1) {
+      // No player moves found, return empty array
+      return []
+    }
+
+    // Include the position before the first player move if it exists
+    // This ensures we can see the evaluation change from the first move
+    const startIndex = Math.max(0, firstPlayerMoveIndex - 1)
+
+    // Return all moves starting from before the first player move, but preserve original indices
+    return moveAnalyses.slice(startIndex).map((move, index) => ({
+      ...move,
+      originalIndex: startIndex + index, // Track original index for board navigation
+    }))
+  }, [moveAnalyses])
+
+  // Store the first player move index for offset calculations
+  const firstPlayerMoveIndex = useMemo(() => {
+    const originalFirstPlayerIndex = moveAnalyses.findIndex(
+      (move) => move.isPlayerMove,
+    )
+    // Account for the fact that we now start one move earlier
+    return Math.max(0, originalFirstPlayerIndex - 1)
+  }, [moveAnalyses])
+
+  // Filter evaluation chart to match the filtered moves
+  const filteredEvaluationChart = useMemo(() => {
+    const firstPlayerMoveIndex = moveAnalyses.findIndex(
+      (move) => move.isPlayerMove,
+    )
+    if (firstPlayerMoveIndex === -1) {
+      return []
+    }
+    // Start one move earlier to include the position before the first player move
+    const startIndex = Math.max(0, firstPlayerMoveIndex - 1)
+    return evaluationChart.slice(startIndex)
+  }, [evaluationChart, moveAnalyses])
+
+  // Handle hover on chart - update board position only if not clicked
+  const handleChartHover = (filteredIndex: number) => {
+    if (!isClicked) {
+      setCurrentMoveIndex(filteredIndex)
+      setHoveredMoveIndex(filteredIndex)
+    }
   }
 
-  // Handle click on move list
-  const handleMoveClick = (moveIndex: number) => {
-    setCurrentMoveIndex(moveIndex)
+  // Handle click on move list - update both board position and chart highlighting
+  const handleMoveClick = (filteredIndex: number) => {
+    setCurrentMoveIndex(filteredIndex)
+    setHoveredMoveIndex(filteredIndex)
+    setIsClicked(true)
+
+    setTimeout(() => {
+      setIsClicked(false)
+    }, 500)
   }
 
   // Get opening FEN from the drill
@@ -980,7 +1195,8 @@ export const DrillPerformanceModal: React.FC<Props> = ({
                 {drill.selection.variation &&
                   ` - ${drill.selection.variation.name}`}
                 {' • '}
-                Analyzed {moveAnalyses.filter((m) => m.isPlayerMove).length} of
+                Analyzed{' '}
+                {filteredMoveAnalyses.filter((m) => m.isPlayerMove).length} of
                 your moves
                 {' • '}
                 Playing as{' '}
@@ -1001,11 +1217,11 @@ export const DrillPerformanceModal: React.FC<Props> = ({
           {/* Left Panel - Animated Game Replay */}
           <div className="flex w-1/3 flex-col border-r border-white/10">
             <AnimatedGameReplay
-              moveAnalyses={moveAnalyses}
+              moveAnalyses={filteredMoveAnalyses}
               openingFen={openingFen}
               playerColor={drill.selection.playerColor}
               onMoveIndexChange={setCurrentMoveIndex}
-              externalMoveIndex={hoveredMoveIndex ?? undefined}
+              externalMoveIndex={currentMoveIndex}
               onMoveClick={handleMoveClick}
             />
           </div>
@@ -1013,9 +1229,9 @@ export const DrillPerformanceModal: React.FC<Props> = ({
           {/* Center Panel - Evaluation Chart */}
           <div className="red-scrollbar flex w-1/3 flex-col gap-3 overflow-y-auto border-r border-white/10 p-4">
             <EvaluationChart
-              evaluationChart={evaluationChart}
-              moveAnalyses={moveAnalyses}
-              currentMoveIndex={currentMoveIndex}
+              evaluationChart={filteredEvaluationChart}
+              moveAnalyses={filteredMoveAnalyses}
+              currentMoveIndex={hoveredMoveIndex ?? currentMoveIndex}
               onHoverMove={handleChartHover}
               playerColor={drill.selection.playerColor}
             />
@@ -1024,8 +1240,8 @@ export const DrillPerformanceModal: React.FC<Props> = ({
           {/* Right Panel - Key Moments Analysis */}
           <div className="red-scrollbar flex w-1/3 flex-col gap-3 overflow-y-auto p-4">
             <KeyMomentsAnalysis
-              moveAnalyses={moveAnalyses}
-              evaluationChart={evaluationChart}
+              moveAnalyses={filteredMoveAnalyses}
+              evaluationChart={filteredEvaluationChart}
               playerColor={drill.selection.playerColor}
             />
           </div>

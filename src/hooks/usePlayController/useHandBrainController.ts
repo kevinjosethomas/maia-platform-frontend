@@ -287,7 +287,7 @@ export const useHandBrainController = (
   return {
     ...controller,
     availableMoves,
-    makeMove: makePlayerMove,
+    makePlayerMove,
     boardShapes,
     selectedPiece,
     movablePieceTypes,

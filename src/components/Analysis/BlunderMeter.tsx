@@ -62,6 +62,7 @@ const DesktopBlunderMeter: React.FC<Props> = ({
 }: Props) => {
   return (
     <div
+      id="analysis-blunder-meter"
       className={`flex h-64 max-h-full w-full flex-col gap-2 overflow-hidden rounded ${showContainer ? 'bg-background-1/60 p-3 md:w-auto md:min-w-[40%] md:max-w-[40%]' : ''} md:h-full`}
     >
       <p className="text-sm text-primary xl:text-base">Blunder Meter</p>
@@ -116,6 +117,7 @@ const MobileBlunderMeter: React.FC<Props> = ({
 }: Props) => {
   return (
     <div
+      id="analysis-blunder-meter"
       className={`flex w-full flex-col gap-2 overflow-hidden rounded ${showContainer ? 'bg-background-1/60 p-3' : ''}`}
     >
       <p className="text-sm text-primary xl:text-base">Blunder Meter</p>

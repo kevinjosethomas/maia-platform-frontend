@@ -1,11 +1,12 @@
 import Head from 'next/head'
 import { NextPage } from 'next/types'
-import { useCallback, useContext, useEffect } from 'react'
+import { useCallback, useContext, useEffect, useState } from 'react'
 
 import {
   ModalContext,
   WindowSizeContext,
   TuringControllerContext,
+  useTour,
 } from 'src/contexts'
 import {
   Loading,
@@ -21,10 +22,13 @@ import {
 import { AllStats } from 'src/hooks/useStats'
 import { TuringGame } from 'src/types/turing'
 import { useTuringController } from 'src/hooks/useTuringController/useTuringController'
+import { tourConfigs } from 'src/config/tours'
 
 const TuringPage: NextPage = () => {
   const { openedModals, setInstructionsModalProps: setInstructionsModalProps } =
     useContext(ModalContext)
+  const { startTour, hasCompletedTour } = useTour()
+  const [initialTourCheck, setInitialTourCheck] = useState(false)
 
   useEffect(() => {
     if (!openedModals.turing) {
@@ -34,6 +38,23 @@ const TuringPage: NextPage = () => {
   }, [setInstructionsModalProps, openedModals.turing])
 
   const controller = useTuringController()
+  const hasGame = !!controller.game // Create stable boolean reference
+
+  useEffect(() => {
+    if (!openedModals.turing && !initialTourCheck) {
+      setInitialTourCheck(true)
+      // Check if user has completed the tour on initial load only
+      if (typeof window !== 'undefined') {
+        const completedTours = JSON.parse(
+          localStorage.getItem('maia-completed-tours') || '[]',
+        )
+
+        if (!completedTours.includes('turing')) {
+          startTour(tourConfigs.turing.id, tourConfigs.turing.steps, false)
+        }
+      }
+    }
+  }, [openedModals.turing, initialTourCheck])
 
   return (
     <TuringControllerContext.Provider value={controller}>
@@ -119,7 +140,10 @@ const Turing: React.FC<Props> = (props: Props) => {
             </div>
             <StatsDisplay stats={stats} />
           </div>
-          <div className="relative flex aspect-square w-full max-w-[75vh] flex-shrink-0">
+          <div
+            id="turing-page"
+            className="relative flex aspect-square w-full max-w-[75vh] flex-shrink-0"
+          >
             <GameBoard game={game} currentNode={controller.currentNode} />
           </div>
           <div className="flex h-[75vh] min-w-64 flex-grow flex-col gap-1">
@@ -130,7 +154,7 @@ const Turing: React.FC<Props> = (props: Props) => {
                 type="turing"
               />
             </div>
-            <div>
+            <div id="turing-submission">
               <TuringSubmission rating={stats.rating ?? 0} />
             </div>
             <div className="flex-none">
@@ -154,7 +178,10 @@ const Turing: React.FC<Props> = (props: Props) => {
 
   const mobileLayout = (
     <>
-      <div className="flex h-full flex-1 flex-col justify-center gap-1">
+      <div
+        id="turing-page"
+        className="flex h-full flex-1 flex-col justify-center gap-1"
+      >
         <div className="mt-2 flex h-full flex-col items-start justify-start gap-2">
           <div className="flex h-auto w-full flex-col gap-2">
             <div className="w-screen">
@@ -187,7 +214,7 @@ const Turing: React.FC<Props> = (props: Props) => {
                 gameTree={controller.gameTree}
               />
             </div>
-            <div className="w-screen">
+            <div id="turing-submission" className="w-screen">
               <TuringSubmission rating={stats.rating ?? 0} />
             </div>
             <div className="flex w-full">

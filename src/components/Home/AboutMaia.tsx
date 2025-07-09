@@ -249,8 +249,32 @@ export const AboutMaia = () => {
             </p>
           </div>
         </div>
-        <div className="mx-auto max-w-7xl px-4 pt-16">
-          <div className="grid gap-6 md:grid-cols-3">
+        <div className="mx-auto max-w-[90%] px-4 pt-16">
+          {/* Layout for screens < 1280px */}
+          <div className="xl:hidden">
+            {/* Featured papers in a row */}
+            <div className="mb-6 grid grid-cols-2 gap-6">
+              <PaperCard
+                paper={researchPapers.maia1}
+                featured={true}
+                className=""
+              />
+              <PaperCard
+                paper={researchPapers.maia2}
+                featured={true}
+                className=""
+              />
+            </div>
+            {/* Other papers in a row */}
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {researchPapers.others.map((paper, index) => (
+                <PaperCard key={index} paper={paper} className="flex-1" />
+              ))}
+            </div>
+          </div>
+
+          {/* Layout for screens >= 1280px (original layout) */}
+          <div className="hidden xl:grid xl:grid-cols-3 xl:gap-6">
             <PaperCard
               paper={researchPapers.maia1}
               featured={true}

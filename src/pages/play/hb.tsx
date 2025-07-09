@@ -1,6 +1,6 @@
 import { NextPage } from 'next/types'
 import { useRouter } from 'next/router'
-import { useCallback, useContext, useEffect, useMemo } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 import { startGame } from 'src/api'
 import {
@@ -8,10 +8,11 @@ import {
   GameplayInterface,
   HandBrainPlayControls,
 } from 'src/components'
-import { ModalContext } from 'src/contexts'
+import { ModalContext, useTour } from 'src/contexts'
 import { Color, PlayGameConfig, TimeControl } from 'src/types'
 import { useHandBrainController } from 'src/hooks/usePlayController/useHandBrainController'
 import { PlayControllerContext } from 'src/contexts/PlayControllerContext/PlayControllerContext'
+import { tourConfigs } from 'src/config/tours'
 
 interface Props {
   id: string
@@ -48,6 +49,8 @@ const PlayHandBrain: React.FC<Props> = ({
 const PlayHandBrainPage: NextPage = () => {
   const { openedModals, setInstructionsModalProps: setInstructionsModalProps } =
     useContext(ModalContext)
+  const { startTour, hasCompletedTour } = useTour()
+  const [initialTourCheck, setInitialTourCheck] = useState(false)
 
   useEffect(() => {
     if (!openedModals.handAndBrain) {
@@ -55,6 +58,26 @@ const PlayHandBrainPage: NextPage = () => {
     }
     return () => setInstructionsModalProps(undefined)
   }, [setInstructionsModalProps, openedModals.handAndBrain])
+
+  useEffect(() => {
+    if (!openedModals.handAndBrain && !initialTourCheck) {
+      setInitialTourCheck(true)
+      // Check if user has completed the tour on initial load only
+      if (typeof window !== 'undefined') {
+        const completedTours = JSON.parse(
+          localStorage.getItem('maia-completed-tours') || '[]',
+        )
+
+        if (!completedTours.includes('handBrain')) {
+          startTour(
+            tourConfigs.handBrain.id,
+            tourConfigs.handBrain.steps,
+            false,
+          )
+        }
+      }
+    }
+  }, [openedModals.handAndBrain, initialTourCheck, startTour])
 
   const router = useRouter()
 

@@ -1,19 +1,7 @@
 import { useMemo } from 'react'
-import {
-  BlunderMeterResult,
-  GameNode,
-  MaiaEvaluation,
-  StockfishEvaluation,
-} from 'src/types'
+import { GameNode, MaiaEvaluation, StockfishEvaluation } from 'src/types'
 import { MAIA_MODELS } from './constants'
 import { describePosition } from './useDescriptionGenerator'
-
-type ColorSanMapping = {
-  [move: string]: {
-    san: string
-    color: string
-  }
-}
 
 export const useBoardDescription = (
   currentNode: GameNode | null,
@@ -21,8 +9,6 @@ export const useBoardDescription = (
     maia?: MaiaEvaluation
     stockfish?: StockfishEvaluation
   } | null,
-  blunderMeter: BlunderMeterResult,
-  colorSanMapping: ColorSanMapping,
 ) => {
   return useMemo(() => {
     if (
@@ -31,7 +17,7 @@ export const useBoardDescription = (
       !moveEvaluation?.maia ||
       moveEvaluation.stockfish.depth < 12
     ) {
-      return ''
+      return { segments: [] }
     }
 
     const fen = currentNode.fen
@@ -57,6 +43,18 @@ export const useBoardDescription = (
       }
     })
 
-    return describePosition(fen, stockfishEvals, maiaEvals, whiteToMove)
-  }, [currentNode, moveEvaluation])
+    const description = describePosition(
+      fen,
+      stockfishEvals,
+      maiaEvals,
+      whiteToMove,
+    )
+    return description
+  }, [
+    currentNode?.fen,
+    currentNode?.analysis.stockfish?.depth,
+    currentNode?.analysis.maia,
+    moveEvaluation?.stockfish?.depth,
+    moveEvaluation?.maia?.policy,
+  ])
 }

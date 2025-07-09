@@ -128,7 +128,7 @@ export const LeaderboardEntry = ({
 
   return (
     <div
-      className={`relative flex w-full items-center justify-between px-6 py-2 ${index % 2 === 0 ? 'bg-opacity-0' : 'bg-white bg-opacity-[0.015]'}`}
+      className={`relative flex w-full items-center justify-between px-4 py-1.5 ${index % 2 === 0 ? 'bg-opacity-0' : 'bg-white bg-opacity-[0.015]'}`}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
@@ -145,19 +145,19 @@ export const LeaderboardEntry = ({
       </div>
       <p>{elo}</p>
       {isPopupVisible && stats && (
-        <div className="absolute left-0 top-[100%] z-20 flex w-full max-w-[26rem] flex-col overflow-hidden rounded border border-white/10 bg-background-1">
-          <div className="flex w-full justify-between bg-backdrop/50 px-4 py-2">
+        <div className="absolute left-0 top-[100%] z-20 flex w-full max-w-[26rem] flex-col overflow-hidden rounded-lg border-2 border-white/20 bg-background-1 outline outline-1 outline-white/5 backdrop-blur-sm">
+          <div className="flex w-full justify-between border-b border-white/10 bg-gradient-to-r from-background-2/80 to-background-2/60 px-4 py-2">
             <p>
               <span className="font-bold">{display_name}</span>&apos;s {type}{' '}
               Statistics
             </p>
             <Link href={`/profile/${display_name}`}>
-              <i className="material-symbols-outlined select-none text-lg text-primary hover:text-human-1">
+              <i className="material-symbols-outlined select-none text-lg text-primary transition-colors hover:text-human-1">
                 open_in_new
               </i>
             </Link>
           </div>
-          <div className="flex items-center justify-between px-4 py-2">
+          <div className="flex items-center justify-between bg-gradient-to-b from-background-1 to-background-1/95 px-4 py-3">
             <div className="flex flex-col items-center justify-center gap-0.5 text-human-1">
               <p className="text-sm xl:text-base">Rating</p>
               <b className="text-3xl xl:text-3xl">{stats[ratingKey]}</b>

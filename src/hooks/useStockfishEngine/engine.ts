@@ -9,6 +9,7 @@ class Engine {
   private moves: string[]
   private isEvaluating: boolean
   private stockfish: StockfishWeb | null = null
+  private isReady = false
 
   private store: {
     [key: string]: StockfishEvaluation
@@ -33,21 +34,31 @@ class Engine {
 
     this.onMessage = this.onMessage.bind(this)
 
-    setupStockfish().then((stockfish: StockfishWeb) => {
-      this.stockfish = stockfish
-      stockfish.uci('uci')
-      stockfish.uci('isready')
-      stockfish.uci('setoption name MultiPV value 100')
-      stockfish.onError = this.onError
-      stockfish.listen = this.onMessage
-    })
+    setupStockfish()
+      .then((stockfish: StockfishWeb) => {
+        this.stockfish = stockfish
+        stockfish.uci('uci')
+        stockfish.uci('isready')
+        stockfish.uci('setoption name MultiPV value 100')
+        stockfish.onError = this.onError
+        stockfish.listen = this.onMessage
+        this.isReady = true
+      })
+      .catch((error) => {
+        console.error('Failed to initialize Stockfish:', error)
+        this.isReady = false
+      })
+  }
+
+  get ready(): boolean {
+    return this.isReady && this.stockfish !== null
   }
 
   async *streamEvaluations(
     fen: string,
     legalMoveCount: number,
   ): AsyncGenerator<StockfishEvaluation> {
-    if (this.stockfish) {
+    if (this.stockfish && this.isReady) {
       if (typeof global.gc === 'function') {
         global.gc()
       }

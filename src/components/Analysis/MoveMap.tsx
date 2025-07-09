@@ -32,6 +32,7 @@ interface Props {
   moveMap?: MoveMapEntry[]
   colorSanMapping: ColorSanMapping
   setHoverArrow: React.Dispatch<React.SetStateAction<DrawShape | null>>
+  makeMove: (move: string) => void
 }
 
 // Helper function to convert hex color to rgba with alpha
@@ -50,6 +51,7 @@ export const MoveMap: React.FC<Props> = ({
   moveMap,
   colorSanMapping,
   setHoverArrow,
+  makeMove,
 }: Props) => {
   const { isMobile, width } = useContext(WindowSizeContext)
   const [hoveredMove, setHoveredMove] = useState<string | null>(null)
@@ -146,7 +148,6 @@ export const MoveMap: React.FC<Props> = ({
     setMousePosition(null)
   }
 
-  // Handle mouse leaving the entire component
   const onContainerMouseLeave = () => {
     onMouseLeave()
   }
@@ -169,6 +170,7 @@ export const MoveMap: React.FC<Props> = ({
 
   return (
     <div
+      id="analysis-move-map"
       className="flex h-64 max-h-full w-full flex-col overflow-hidden bg-background-1/60 md:h-full md:rounded"
       onMouseLeave={onContainerMouseLeave}
     >
@@ -262,7 +264,8 @@ export const MoveMap: React.FC<Props> = ({
               />
             </YAxis>
             {moveMap?.map((entry, index) => {
-              const opacity = entry.opacity ?? 1
+              // Set minimum opacity to 0.5 to ensure visibility
+              const opacity = Math.max(entry.opacity ?? 1, 0.5)
               const size = entry.size ?? (isMobile ? 8 : 10)
               const baseColor = colorSanMapping[entry.move]?.color ?? '#fff'
               const fillColor = baseColor.startsWith('#')
@@ -283,6 +286,7 @@ export const MoveMap: React.FC<Props> = ({
                       onMouseEnter(entry.move, entry, event)
                     }
                     onMouseLeave={onMouseLeave}
+                    onMouseDown={() => makeMove(entry.move)}
                     style={{ cursor: 'pointer' }}
                   />
                 </Scatter>

@@ -8,34 +8,61 @@ import {
   CompletedDrill,
   OpeningDrillGame,
 } from 'src/types/openings'
+import { cpToWinrate } from 'src/utils/stockfish'
 
-// Classification thresholds based on evaluation loss (in centipawns)
+// Classification thresholds based on winrate change (same as frontend)
 const MOVE_CLASSIFICATION_THRESHOLDS = {
-  excellent: -10, // Actually gaining or minimal loss
-  good: -25,
-  inaccuracy: -50,
-  mistake: -100,
-  blunder: -200, // Anything worse is a blunder
+  BLUNDER_THRESHOLD: 0.1, // 10% winrate drop - significant mistake
+  INACCURACY_THRESHOLD: 0.05, // 5% winrate drop - noticeable error
+  EXCELLENT_THRESHOLD: 0.08, // 8% winrate gain - very good move
 }
 
 // Maia rating levels for comparison
 const MAIA_RATINGS = [1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900]
 
 /**
- * Classifies a move based on evaluation loss
+ * Classifies a move based on winrate change
  */
-function classifyMove(evaluationLoss: number): MoveAnalysis['classification'] {
-  if (evaluationLoss >= MOVE_CLASSIFICATION_THRESHOLDS.excellent) {
-    return 'excellent'
-  } else if (evaluationLoss >= MOVE_CLASSIFICATION_THRESHOLDS.good) {
-    return 'good'
-  } else if (evaluationLoss >= MOVE_CLASSIFICATION_THRESHOLDS.inaccuracy) {
-    return 'inaccuracy'
-  } else if (evaluationLoss >= MOVE_CLASSIFICATION_THRESHOLDS.mistake) {
-    return 'mistake'
+function classifyMove(
+  currentEval: number,
+  previousEval: number,
+  isPlayerMove: boolean,
+  playerColor: 'white' | 'black',
+): MoveAnalysis['classification'] {
+  // Convert evaluations to winrates
+  const currentWinrate = cpToWinrate(currentEval)
+  const previousWinrate = cpToWinrate(previousEval)
+
+  // Calculate winrate change from player's perspective
+  let winrateChange: number
+
+  if (isPlayerMove) {
+    // For player moves, we need to consider which color they're playing
+    if (playerColor === 'white') {
+      // Higher evaluation is better for white
+      winrateChange = currentWinrate - previousWinrate
+    } else {
+      // Lower evaluation is better for black
+      winrateChange = previousWinrate - currentWinrate
+    }
   } else {
-    return 'blunder'
+    // For opponent moves, we don't classify them
+    return 'good' // Default to good for non-player moves
   }
+
+  if (winrateChange <= -MOVE_CLASSIFICATION_THRESHOLDS.BLUNDER_THRESHOLD) {
+    return 'blunder'
+  } else if (
+    winrateChange <= -MOVE_CLASSIFICATION_THRESHOLDS.INACCURACY_THRESHOLD
+  ) {
+    return 'inaccuracy'
+  } else if (
+    winrateChange >= MOVE_CLASSIFICATION_THRESHOLDS.EXCELLENT_THRESHOLD
+  ) {
+    return 'excellent'
+  }
+
+  return 'good' // Normal moves are good (backend uses 'good', frontend filters to show only notable ones)
 }
 
 /**
@@ -331,6 +358,7 @@ export async function analyzeDrillPerformance(
 
     const moveAnalyses: MoveAnalysis[] = []
     const evaluationChart: EvaluationPoint[] = []
+    let previousEvaluation: number | null = null
 
     // Analyze each position
     for (let i = 0; i < gameNodes.length - 1; i++) {
@@ -339,11 +367,12 @@ export async function analyzeDrillPerformance(
 
       if (!nextNode.move || !nextNode.san) continue
 
-      const chess = new Chess(currentGameNode.fen)
+      // Use the position after the move to determine who made the move
+      const chess = new Chess(nextNode.fen)
       const isPlayerMove =
         drillGame.selection.playerColor === 'white'
-          ? chess.turn() === 'w'
-          : chess.turn() === 'b'
+          ? chess.turn() === 'b' // If Black is to move, White just moved
+          : chess.turn() === 'w' // If White is to move, Black just moved
 
       // Get or calculate Stockfish evaluation for this position
       let evaluation: StockfishEvaluation | null =
@@ -382,14 +411,28 @@ export async function analyzeDrillPerformance(
           console.warn('Failed to get Maia best move:', error)
         }
 
+        // Extract move number from FEN string
+        const getMoveNumberFromFen = (fen: string): number => {
+          const fenParts = fen.split(' ')
+          return parseInt(fenParts[5]) || 1 // 6th part is the full move number
+        }
+
+        // Use previous evaluation for classification, or default to 0 for first move
+        const prevEval = previousEvaluation ?? 0
+
         const moveAnalysis: MoveAnalysis = {
           move: playedMove,
           san: nextNode.san,
-          fen: currentGameNode.fen,
-          moveNumber: Math.floor(i / 2) + 1,
+          fen: nextNode.fen, // Use position after the move for UI helpers
+          moveNumber: getMoveNumberFromFen(nextNode.fen),
           isPlayerMove,
           evaluation: playedMoveEval,
-          classification: classifyMove(evaluationLoss),
+          classification: classifyMove(
+            playedMoveEval,
+            prevEval,
+            isPlayerMove,
+            drillGame.selection.playerColor,
+          ),
           evaluationLoss,
           bestMove,
           bestEvaluation: bestEval,
@@ -406,6 +449,9 @@ export async function analyzeDrillPerformance(
           isPlayerMove,
           moveClassification: moveAnalysis.classification,
         })
+
+        // Update previous evaluation for next iteration
+        previousEvaluation = playedMoveEval
       }
     }
 

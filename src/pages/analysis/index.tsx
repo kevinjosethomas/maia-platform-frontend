@@ -1,11 +1,9 @@
 import { NextPage } from 'next'
 import { useRouter } from 'next/router'
-import { useContext, useEffect, useState } from 'react'
-
 import { Loading } from 'src/components'
-import { AnalysisListContext } from 'src/contexts'
-import { useLocalStorage } from 'src/hooks'
 import { getAnalysisGameList } from 'src/api'
+import { AnalysisListContext } from 'src/contexts'
+import { useContext, useEffect, useState } from 'react'
 
 const AnalysisPage: NextPage = () => {
   const { push } = useRouter()

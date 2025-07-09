@@ -27,24 +27,24 @@ import {
   ModalContext,
   WindowSizeContext,
   TreeControllerContext,
+  useTour,
 } from 'src/contexts'
-import {
-  Loading,
-  MoveMap,
-  GameInfo,
-  Highlight,
-  BlunderMeter,
-  MovesByRating,
-  AnalysisGameList,
-  GameBoard,
-  DownloadModelModal,
-  AuthenticatedWrapper,
-  MovesContainer,
-  BoardController,
-  PromotionOverlay,
-  CustomAnalysisModal,
-  PlayerInfo,
-} from 'src/components'
+import { Loading } from 'src/components/Core/Loading'
+import { AuthenticatedWrapper } from 'src/components/Core/AuthenticatedWrapper'
+import { PlayerInfo } from 'src/components/Core/PlayerInfo'
+import { MoveMap } from 'src/components/Analysis/MoveMap'
+import { Highlight } from 'src/components/Analysis/Highlight'
+import { BlunderMeter } from 'src/components/Analysis/BlunderMeter'
+import { MovesByRating } from 'src/components/Analysis/MovesByRating'
+import { AnalysisGameList } from 'src/components/Analysis/AnalysisGameList'
+import { DownloadModelModal } from 'src/components/Analysis/DownloadModelModal'
+import { CustomAnalysisModal } from 'src/components/Analysis/CustomAnalysisModal'
+import { ConfigurableScreens } from 'src/components/Analysis/ConfigurableScreens'
+import { GameBoard } from 'src/components/Board/GameBoard'
+import { MovesContainer } from 'src/components/Board/MovesContainer'
+import { BoardController } from 'src/components/Board/BoardController'
+import { PromotionOverlay } from 'src/components/Board/PromotionOverlay'
+import { GameInfo } from 'src/components/Misc/GameInfo'
 import Head from 'next/head'
 import toast from 'react-hot-toast'
 import type { NextPage } from 'next'
@@ -53,8 +53,8 @@ import type { Key } from 'chessground/types'
 import { Chess, PieceSymbol } from 'chess.ts'
 import { AnimatePresence } from 'framer-motion'
 import { useAnalysisController } from 'src/hooks'
+import { tourConfigs } from 'src/config/tours'
 import type { DrawBrushes, DrawShape } from 'chessground/draw'
-import { ConfigurableScreens } from 'src/components/Analysis/ConfigurableScreens'
 
 const MAIA_MODELS = [
   'maia_kdd_1100',
@@ -71,21 +71,30 @@ const MAIA_MODELS = [
 const AnalysisPage: NextPage = () => {
   const { openedModals, setInstructionsModalProps: setInstructionsModalProps } =
     useContext(ModalContext)
+  const { startTour, hasCompletedTour } = useTour()
 
   const router = useRouter()
-
-  useEffect(() => {
-    if (!openedModals.analysis) {
-      setInstructionsModalProps({ instructionsType: 'analysis' })
-    }
-    return () => setInstructionsModalProps(undefined)
-  }, [setInstructionsModalProps, openedModals.analysis])
-
   const { id } = router.query
 
   const [analyzedGame, setAnalyzedGame] = useState<AnalyzedGame | undefined>(
     undefined,
   )
+  const [initialTourCheck, setInitialTourCheck] = useState(false)
+
+  useEffect(() => {
+    if (!openedModals.analysis && !initialTourCheck) {
+      setInitialTourCheck(true)
+      // Check if user has completed the tour on initial load only
+      const completedTours =
+        typeof window !== 'undefined'
+          ? JSON.parse(localStorage.getItem('maia-completed-tours') || '[]')
+          : []
+
+      if (!completedTours.includes('analysis')) {
+        startTour(tourConfigs.analysis.id, tourConfigs.analysis.steps, false)
+      }
+    }
+  }, [openedModals.analysis, initialTourCheck])
   const [currentId, setCurrentId] = useState<string[]>(id as string[])
 
   const getAndSetTournamentGame = useCallback(
@@ -327,7 +336,9 @@ const Analysis: React.FC<Props> = ({
   const controller = useAnalysisController(analyzedGame)
 
   useEffect(() => {
-    controller.setCurrentNode(analyzedGame.tree?.getRoot())
+    if (analyzedGame.tree) {
+      controller.setCurrentNode(analyzedGame.tree.getRoot())
+    }
   }, [analyzedGame])
 
   useEffect(() => {
@@ -677,6 +688,7 @@ const Analysis: React.FC<Props> = ({
               }
               color={controller.orientation === 'white' ? 'white' : 'black'}
               termination={analyzedGame.termination.winner}
+              showArrowLegend={true}
             />
           </div>
           <ConfigurableScreens
@@ -703,6 +715,7 @@ const Analysis: React.FC<Props> = ({
                     hover={hover}
                     makeMove={makeMove}
                     currentMaiaModel={controller.currentMaiaModel}
+                    setCurrentMaiaModel={controller.setCurrentMaiaModel}
                     recommendations={controller.moveRecommendations}
                     moveEvaluation={
                       controller.moveEvaluation as {
@@ -728,6 +741,7 @@ const Analysis: React.FC<Props> = ({
                   moveMap={controller.moveMap}
                   colorSanMapping={controller.colorSanMapping}
                   setHoverArrow={setHoverArrow}
+                  makeMove={makeMove}
                 />
               </div>
               <BlunderMeter
@@ -749,6 +763,7 @@ const Analysis: React.FC<Props> = ({
                   hover={hover}
                   makeMove={makeMove}
                   currentMaiaModel={controller.currentMaiaModel}
+                  setCurrentMaiaModel={controller.setCurrentMaiaModel}
                   recommendations={controller.moveRecommendations}
                   moveEvaluation={
                     controller.moveEvaluation as {
@@ -781,6 +796,7 @@ const Analysis: React.FC<Props> = ({
                   moveMap={controller.moveMap}
                   colorSanMapping={controller.colorSanMapping}
                   setHoverArrow={setHoverArrow}
+                  makeMove={makeMove}
                 />
               </div>
             </div>
@@ -925,6 +941,7 @@ const Analysis: React.FC<Props> = ({
                 hover={hover}
                 makeMove={makeMove}
                 currentMaiaModel={controller.currentMaiaModel}
+                setCurrentMaiaModel={controller.setCurrentMaiaModel}
                 recommendations={controller.moveRecommendations}
                 moveEvaluation={
                   controller.moveEvaluation as {
@@ -943,6 +960,7 @@ const Analysis: React.FC<Props> = ({
                 moveMap={controller.moveMap}
                 colorSanMapping={controller.colorSanMapping}
                 setHoverArrow={setHoverArrow}
+                makeMove={makeMove}
               />
             </div>
             <ConfigurableScreens
