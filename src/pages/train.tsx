@@ -787,7 +787,15 @@ const Train: React.FC<Props> = ({
                         boardDescription={
                           showAnalysis
                             ? analysisController.boardDescription
-                            : 'This position offers multiple strategic options. Consider central control and piece development.'
+                            : {
+                                segments: [
+                                  {
+                                    type: 'text',
+                                    content:
+                                      'This position offers multiple strategic options. Consider central control and piece development.',
+                                  },
+                                ],
+                              }
                         }
                       />
                       {!showAnalysis && (
@@ -861,7 +869,15 @@ const Train: React.FC<Props> = ({
                     boardDescription={
                       showAnalysis
                         ? analysisController.boardDescription
-                        : 'This position offers multiple strategic options. Consider central control and piece development.'
+                        : {
+                            segments: [
+                              {
+                                type: 'text',
+                                content:
+                                  'This position offers multiple strategic options. Consider central control and piece development.',
+                              },
+                            ],
+                          }
                     }
                   />
                 </div>
@@ -1187,7 +1203,15 @@ const Train: React.FC<Props> = ({
                   boardDescription={
                     showAnalysis
                       ? analysisController.boardDescription
-                      : 'This position offers multiple strategic options. Consider central control and piece development.'
+                      : {
+                          segments: [
+                            {
+                              type: 'text',
+                              content:
+                                'This position offers multiple strategic options. Consider central control and piece development.',
+                            },
+                          ],
+                        }
                   }
                 />
                 {!showAnalysis && (

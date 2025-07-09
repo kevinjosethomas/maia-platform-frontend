@@ -32,7 +32,7 @@ function MaiaPlatform({ Component, pageProps }: AppProps) {
   const isAnalysisPage = router.pathname.startsWith('/analysis')
 
   useEffect(() => {
-    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY as string, {
       api_host: '/ingest',
       ui_host: 'https://us.posthog.com',
       defaults: '2025-05-24',
