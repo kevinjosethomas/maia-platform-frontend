@@ -157,9 +157,20 @@ export const OpeningDrillAnalysis: React.FC<Props> = ({
                   }
                   boardDescription={
                     analysisEnabled
-                      ? analysisController.boardDescription ||
-                        'Analyzing position...'
-                      : 'Analysis is disabled. Enable analysis to see detailed move evaluations and recommendations.'
+                      ? analysisController.boardDescription || {
+                          segments: [
+                            { type: 'text', content: 'Analyzing position...' },
+                          ],
+                        }
+                      : {
+                          segments: [
+                            {
+                              type: 'text',
+                              content:
+                                'Analysis is disabled. Enable analysis to see detailed move evaluations and recommendations.',
+                            },
+                          ],
+                        }
                   }
                 />
               </div>
@@ -259,9 +270,20 @@ export const OpeningDrillAnalysis: React.FC<Props> = ({
                 }
                 boardDescription={
                   analysisEnabled
-                    ? analysisController.boardDescription ||
-                      'Analyzing position...'
-                    : 'Analysis is disabled. Enable analysis to see detailed move evaluations and recommendations.'
+                    ? analysisController.boardDescription || {
+                        segments: [
+                          { type: 'text', content: 'Analyzing position...' },
+                        ],
+                      }
+                    : {
+                        segments: [
+                          {
+                            type: 'text',
+                            content:
+                              'Analysis is disabled. Enable analysis to see detailed move evaluations and recommendations.',
+                          },
+                        ],
+                      }
                 }
               />
             </div>
