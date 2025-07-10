@@ -11,8 +11,39 @@ export default function Blog({ posts }: { posts: Post[] }) {
         <title>Blog – Maia Chess</title>
         <meta
           name="description"
-          content="Maia Chess is in beta! Sign up to get access"
+          content="Read the latest insights from the Maia Chess team about human-like chess AI, research updates, and platform developments."
         />
+
+        {/* Open Graph */}
+        <meta property="og:title" content="Blog – Maia Chess" />
+        <meta
+          property="og:description"
+          content="Read the latest insights from the Maia Chess team about human-like chess AI, research updates, and platform developments."
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://maiachess.com/blog" />
+        <meta
+          property="og:image"
+          content="https://maiachess.com/maia-og-image.png"
+        />
+        <meta property="og:site_name" content="Maia Chess" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Blog – Maia Chess" />
+        <meta
+          name="twitter:description"
+          content="Read the latest insights from the Maia Chess team about human-like chess AI, research updates, and platform developments."
+        />
+        <meta
+          name="twitter:image"
+          content="https://maiachess.com/maia-og-image.png"
+        />
+
+        {/* Additional SEO */}
+        <meta name="author" content="Maia Chess Team" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://maiachess.com/blog" />
       </Head>
       <h1 className="text-4xl font-bold">Blog</h1>
       <div className="flex w-full flex-col gap-6 overflow-x-hidden">

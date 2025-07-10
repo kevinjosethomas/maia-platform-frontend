@@ -19,21 +19,53 @@ const BlogPost = ({ post }: BlogPostProps) => {
   }
 
   return (
-    <div className="mx-auto flex h-full w-[80ch] flex-col items-start justify-center gap-5 py-[10%] md:py-[2%]">
+    <div className="flex h-full max-w-[80ch] flex-col items-center justify-center gap-5 py-[10%] md:py-[2%]">
       <Head>
-        <title>Blog – Maia Chess</title>
+        <title>{post.title} – Maia Chess</title>
+        <meta name="description" content={post.excerpt} />
+
+        {/* Open Graph */}
+        <meta property="og:title" content={post.title} />
+        <meta property="og:description" content={post.excerpt} />
+        <meta property="og:type" content="article" />
         <meta
-          name="description"
-          content="Maia Chess is in beta! Sign up to get access"
+          property="og:url"
+          content={`https://maiachess.com/blog/${post.id}`}
         />
+        <meta
+          property="og:image"
+          content={`https://maiachess.com${post.image}`}
+        />
+        <meta property="og:site_name" content="Maia Chess" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={post.title} />
+        <meta name="twitter:description" content={post.excerpt} />
+        <meta
+          name="twitter:image"
+          content={`https://maiachess.com${post.image}`}
+        />
+
+        {/* Article specific */}
+        <meta property="article:published_time" content={post.date} />
+        <meta property="article:author" content="Maia Chess Team" />
+        {post.tags.map((tag, index) => (
+          <meta key={index} property="article:tag" content={tag} />
+        ))}
+
+        {/* Additional SEO */}
+        <meta name="author" content="Maia Chess Team" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href={`https://maiachess.com/blog/${post.id}`} />
       </Head>
-      <div className="flex w-full flex-col items-center justify-center overflow-x-hidden">
+      <div className="flex max-w-[90%] flex-col items-center justify-center overflow-x-hidden">
         <div className="mb-8 flex w-full flex-col gap-2">
           <Link href="/blog">
             <p className="hover:opacity-75">← Go back</p>
           </Link>
-          <h1 className="text-4xl font-bold">{post.title}</h1>
-          <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold md:text-4xl">{post.title}</h1>
+          <div className="flex flex-wrap items-center gap-2 md:gap-4">
             <p>
               {new Date(post.date).toLocaleDateString('en-US', {
                 month: 'short',
@@ -77,7 +109,7 @@ const BlogPost = ({ post }: BlogPostProps) => {
             ))}
           </div>
         </div>
-        <div className="prose-xl prose-invert w-full max-w-[80ch] leading-relaxed prose-headings:mb-2 prose-a:text-human-2 hover:prose-a:underline prose-ul:list-inside prose-ul:list-disc prose-li:text-sm prose-hr:my-8 prose-hr:opacity-20">
+        <div className="prose prose-sm prose-invert w-full max-w-none leading-relaxed md:prose-lg lg:prose-xl prose-headings:mb-2 prose-a:text-human-2 hover:prose-a:underline prose-ul:list-inside prose-ul:list-disc prose-li:text-sm prose-hr:my-8 prose-hr:opacity-20 lg:max-w-[80ch]">
           <Markdown>{post.content}</Markdown>
         </div>
       </div>
