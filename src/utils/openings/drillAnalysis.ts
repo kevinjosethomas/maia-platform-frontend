@@ -3,6 +3,7 @@ import { GameNode, StockfishEvaluation, MaiaEvaluation } from 'src/types'
 import {
   MoveAnalysis,
   RatingComparison,
+  RatingPrediction,
   EvaluationPoint,
   DrillPerformanceData,
   CompletedDrill,
@@ -116,9 +117,9 @@ async function analyzePosition(
 }
 
 /**
- * Compares player moves to Maia predictions across different rating levels
+ * Creates a confident rating prediction from player moves using advanced statistical analysis
  */
-async function compareToMaiaRatings(
+async function createRatingPrediction(
   moveAnalyses: MoveAnalysis[],
   maia: {
     batchEvaluate: (
@@ -127,121 +128,205 @@ async function compareToMaiaRatings(
       thresholds: number[],
     ) => Promise<{ result: MaiaEvaluation[]; time: number }>
   },
-): Promise<RatingComparison[]> {
+): Promise<RatingPrediction> {
   const playerMoves = moveAnalyses.filter((analysis) => analysis.isPlayerMove)
 
   if (playerMoves.length === 0) {
-    return MAIA_RATINGS.map((rating) => ({
-      rating,
-      probability: 0,
-      moveMatch: false,
-    }))
+    throw new Error('No player moves available for Maia analysis')
   }
+
+  let ratingDistribution: RatingComparison[]
 
   try {
-    // Get Maia evaluations for all player move positions
-    const fens = playerMoves.map((analysis) => analysis.fen)
+    // Get the FEN positions BEFORE each player move
+    const positionsBeforePlayerMoves: string[] = []
+
+    for (const playerMove of playerMoves) {
+      if (playerMove.fenBeforeMove) {
+        positionsBeforePlayerMoves.push(playerMove.fenBeforeMove)
+      } else {
+        const chess = new Chess(playerMove.fen)
+        chess.undo()
+        positionsBeforePlayerMoves.push(chess.fen())
+      }
+    }
+
+    // Create the arrays for batch evaluation
+    const fensForBatch: string[] = []
+    const ratingsForBatch: number[] = []
+    const thresholdsForBatch: number[] = []
+
+    for (const fen of positionsBeforePlayerMoves) {
+      for (let i = 0; i < MAIA_RATINGS.length; i++) {
+        fensForBatch.push(fen)
+        ratingsForBatch.push(MAIA_RATINGS[i])
+        thresholdsForBatch.push(MAIA_RATINGS[i])
+      }
+    }
+
     const { result } = await maia.batchEvaluate(
-      fens,
-      MAIA_RATINGS,
-      MAIA_RATINGS,
+      fensForBatch,
+      ratingsForBatch,
+      thresholdsForBatch,
     )
 
-    const ratingMatches: { [rating: number]: number } = {}
-    MAIA_RATINGS.forEach((rating) => {
-      ratingMatches[rating] = 0
-    })
-
-    // Check how many moves match Maia's top choice for each rating
-    playerMoves.forEach((moveAnalysis, index) => {
-      MAIA_RATINGS.forEach((rating, ratingIndex) => {
-        const maiaEval = result[index * MAIA_RATINGS.length + ratingIndex]
-        if (maiaEval && maiaEval.policy) {
-          const topMove = Object.keys(maiaEval.policy).reduce((a, b) =>
-            maiaEval.policy[a] > maiaEval.policy[b] ? a : b,
-          )
-          if (topMove === moveAnalysis.move) {
-            ratingMatches[rating]++
-          }
-        }
-      })
-    })
-
-    const totalMatches = Object.values(ratingMatches).reduce(
-      (sum, matches) => sum + matches,
-      0,
+    const validResults = result.filter(
+      (r) => r && r.policy && Object.keys(r.policy).length > 0,
     )
 
-    // If Maia evaluation worked, return the results
-    if (totalMatches > 0) {
-      return MAIA_RATINGS.map((rating) => ({
-        rating,
-        probability:
-          playerMoves.length > 0
-            ? ratingMatches[rating] / playerMoves.length
-            : 0,
-        moveMatch: ratingMatches[rating] > 0,
-      }))
+    if (validResults.length < result.length * 0.8) {
+      throw new Error(
+        `Insufficient Maia data: only ${validResults.length}/${result.length} valid results`,
+      )
     }
+
+    ratingDistribution = await analyzeMaiaData(
+      playerMoves,
+      result,
+      positionsBeforePlayerMoves,
+    )
   } catch (error) {
-    console.error('Error comparing to Maia ratings:', error)
+    throw error
   }
 
-  // Fallback: Estimate rating based on move quality
-  const excellentCount = playerMoves.filter(
-    (m) => m.classification === 'excellent',
-  ).length
-  const goodCount = playerMoves.filter(
-    (m) => m.classification === 'good',
-  ).length
-  const inaccuracyCount = playerMoves.filter(
-    (m) => m.classification === 'inaccuracy',
-  ).length
-  const mistakeCount = playerMoves.filter(
-    (m) => m.classification === 'mistake',
-  ).length
-  const blunderCount = playerMoves.filter(
-    (m) => m.classification === 'blunder',
-  ).length
+  // Calculate weighted average rating prediction using log likelihood
+  const weightedSum = ratingDistribution.reduce(
+    (sum, item) => sum + item.rating * item.likelihoodProbability,
+    0,
+  )
+  const totalWeight = ratingDistribution.reduce(
+    (sum, item) => sum + item.likelihoodProbability,
+    0,
+  )
+  const predictedRating = Math.round(weightedSum / totalWeight)
 
-  const totalMoves = playerMoves.length
-  const accuracyScore = (excellentCount + goodCount) / totalMoves
+  // Calculate standard deviation (uncertainty) using likelihood probabilities
+  const variance =
+    ratingDistribution.reduce(
+      (sum, item) =>
+        sum +
+        item.likelihoodProbability * Math.pow(item.rating - predictedRating, 2),
+      0,
+    ) / totalWeight
+  const standardDeviation = Math.sqrt(variance)
 
-  // Estimate rating based on accuracy and move quality
-  let estimatedRating = 1100
-  if (accuracyScore >= 0.9 && blunderCount === 0) {
-    estimatedRating = 1800
-  } else if (accuracyScore >= 0.8 && blunderCount <= 1) {
-    estimatedRating = 1600
-  } else if (accuracyScore >= 0.7) {
-    estimatedRating = 1400
-  } else if (accuracyScore >= 0.6) {
-    estimatedRating = 1300
-  } else if (accuracyScore >= 0.5) {
-    estimatedRating = 1200
+  return {
+    predictedRating,
+    standardDeviation,
+    sampleSize: playerMoves.length,
+    ratingDistribution,
   }
+}
 
-  // Create a probability distribution around the estimated rating
-  return MAIA_RATINGS.map((rating) => {
-    const distance = Math.abs(rating - estimatedRating)
-    let probability = 0
+/**
+ * Analyzes Maia evaluation data to create rating distribution
+ */
+async function analyzeMaiaData(
+  playerMoves: MoveAnalysis[],
+  maiaResults: MaiaEvaluation[],
+  positionsBeforePlayerMoves: string[],
+): Promise<RatingComparison[]> {
+  const ratingMatches: { [rating: number]: number } = {}
+  const logLikelihoods: { [rating: number]: number } = {}
+  const moveProbabilities: { [rating: number]: number[] } = {}
 
-    if (distance === 0) {
-      probability = 0.4
-    } else if (distance <= 100) {
-      probability = 0.3
-    } else if (distance <= 200) {
-      probability = 0.2
-    } else if (distance <= 300) {
-      probability = 0.1
-    }
-
-    return {
-      rating,
-      probability,
-      moveMatch: distance <= 200,
-    }
+  MAIA_RATINGS.forEach((rating) => {
+    ratingMatches[rating] = 0
+    logLikelihoods[rating] = 0
+    moveProbabilities[rating] = []
   })
+
+  // Process each move
+  playerMoves.forEach((moveAnalysis, moveIndex) => {
+    MAIA_RATINGS.forEach((rating, ratingIndex) => {
+      const resultIndex = moveIndex * MAIA_RATINGS.length + ratingIndex
+      const maiaEval = maiaResults[resultIndex]
+
+      if (
+        maiaEval &&
+        maiaEval.policy &&
+        Object.keys(maiaEval.policy).length > 0
+      ) {
+        // Check if player's move matches Maia's top choice
+        const topMove = Object.keys(maiaEval.policy).reduce((a, b) =>
+          maiaEval.policy[a] > maiaEval.policy[b] ? a : b,
+        )
+        const isTopMove = topMove === moveAnalysis.move
+        if (isTopMove) {
+          ratingMatches[rating]++
+        }
+
+        // Get probability of player's actual move from Maia's policy
+        const moveProb = maiaEval.policy[moveAnalysis.move] || 0.0001
+        moveProbabilities[rating].push(moveProb)
+
+        // Add to log likelihood
+        logLikelihoods[rating] += Math.log(moveProb)
+      }
+    })
+  })
+
+  // Calculate statistics
+  const averageMoveProbabilities: { [rating: number]: number } = {}
+  MAIA_RATINGS.forEach((rating) => {
+    const probs = moveProbabilities[rating]
+    averageMoveProbabilities[rating] =
+      probs.length > 0
+        ? probs.reduce((sum, prob) => sum + prob, 0) / probs.length
+        : 0
+  })
+
+  // Convert to probability distribution with enhanced smoothing
+  const smoothedLikelihoods = smoothLogLikelihoods(logLikelihoods)
+  const expValues = MAIA_RATINGS.map((rating) =>
+    Math.exp(smoothedLikelihoods[rating]),
+  )
+  const sumExpValues = expValues.reduce((sum, val) => sum + val, 0)
+
+  return MAIA_RATINGS.map((rating, index) => ({
+    rating,
+    probability:
+      playerMoves.length > 0 ? ratingMatches[rating] / playerMoves.length : 0,
+    moveMatch: ratingMatches[rating] > 0,
+    logLikelihood: logLikelihoods[rating],
+    likelihoodProbability: expValues[index] / sumExpValues,
+    averageMoveProb: averageMoveProbabilities[rating],
+  }))
+}
+
+/**
+ * Smooth log likelihoods to create more realistic distributions
+ */
+function smoothLogLikelihoods(logLikelihoods: { [rating: number]: number }): {
+  [rating: number]: number
+} {
+  const smoothed: { [rating: number]: number } = {}
+  const values = MAIA_RATINGS.map((rating) => logLikelihoods[rating])
+  const maxValue = Math.max(...values)
+
+  // Normalize to prevent overflow
+  MAIA_RATINGS.forEach((rating) => {
+    smoothed[rating] = logLikelihoods[rating] - maxValue
+  })
+
+  // Apply mild smoothing to adjacent ratings
+  const smoothingFactor = 0.1
+  const beforeSmoothing = { ...smoothed }
+  MAIA_RATINGS.forEach((rating, index) => {
+    let smoothedValue = smoothed[rating] * (1 - smoothingFactor)
+
+    // Add influence from neighbors
+    if (index > 0) {
+      smoothedValue += smoothed[MAIA_RATINGS[index - 1]] * (smoothingFactor / 2)
+    }
+    if (index < MAIA_RATINGS.length - 1) {
+      smoothedValue += smoothed[MAIA_RATINGS[index + 1]] * (smoothingFactor / 2)
+    }
+
+    smoothed[rating] = smoothedValue
+  })
+
+  return smoothed
 }
 
 /**
@@ -423,7 +508,8 @@ export async function analyzeDrillPerformance(
         const moveAnalysis: MoveAnalysis = {
           move: playedMove,
           san: nextNode.san,
-          fen: nextNode.fen, // Use position after the move for UI helpers
+          fen: nextNode.fen, // Position after the move (for UI display)
+          fenBeforeMove: currentGameNode.fen, // Position before the move (for Maia analysis)
           moveNumber: getMoveNumberFromFen(nextNode.fen),
           isPlayerMove,
           evaluation: playedMoveEval,
@@ -498,8 +584,9 @@ export async function analyzeDrillPerformance(
           100
         : 100
 
-    // Get rating comparison
-    const ratingComparison = await compareToMaiaRatings(moveAnalyses, maia)
+    // Get enhanced rating prediction and comparison
+    const ratingPrediction = await createRatingPrediction(moveAnalyses, maia)
+    const ratingComparison = ratingPrediction.ratingDistribution
 
     // Generate feedback
     const feedback = generateDetailedFeedback(
@@ -559,6 +646,7 @@ export async function analyzeDrillPerformance(
       feedback,
       moveAnalyses,
       ratingComparison,
+      ratingPrediction,
       bestPlayerMoves,
       worstPlayerMoves,
       averageEvaluationLoss,
@@ -599,6 +687,12 @@ export async function analyzeDrillPerformance(
       feedback: ['Analysis temporarily unavailable. Please try again.'],
       moveAnalyses: [],
       ratingComparison: [],
+      ratingPrediction: {
+        predictedRating: 1400,
+        standardDeviation: 300,
+        sampleSize: 0,
+        ratingDistribution: [],
+      },
       bestPlayerMoves: [],
       worstPlayerMoves: [],
       averageEvaluationLoss: 0,

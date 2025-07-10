@@ -123,7 +123,8 @@ export const GameList = () => {
             const parsedGames = data.games.map((game: GameData) =>
               parse(game, gameType),
             )
-            const calculatedTotalPages = Math.ceil(data.total / 100)
+            const calculatedTotalPages =
+              data.total_pages || Math.ceil(data.total_games / 100)
 
             setTotalPagesCache((prev) => ({
               ...prev,
@@ -131,17 +132,11 @@ export const GameList = () => {
             }))
 
             if (gameType === 'play') {
-              setPlayGames((prev) =>
-                currentPage === 1 ? parsedGames : [...prev, ...parsedGames],
-              )
+              setPlayGames(parsedGames)
             } else if (gameType === 'hand') {
-              setHandGames((prev) =>
-                currentPage === 1 ? parsedGames : [...prev, ...parsedGames],
-              )
+              setHandGames(parsedGames)
             } else if (gameType === 'brain') {
-              setBrainGames((prev) =>
-                currentPage === 1 ? parsedGames : [...prev, ...parsedGames],
-              )
+              setBrainGames(parsedGames)
             }
 
             setLoading(false)
@@ -297,7 +292,9 @@ export const GameList = () => {
                 }`}
               >
                 <div className="flex h-full w-10 items-center justify-center bg-background-2 py-1 group-hover:bg-white/5">
-                  <p className="text-sm text-secondary">{index + 1}</p>
+                  <p className="text-sm text-secondary">
+                    {(currentPage - 1) * 100 + index + 1}
+                  </p>
                 </div>
                 <div className="flex flex-1 items-center justify-between overflow-hidden py-1">
                   <div className="flex items-center gap-2 overflow-hidden">

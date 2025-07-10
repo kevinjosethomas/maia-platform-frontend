@@ -56,7 +56,8 @@ export interface OpeningDrillGame {
 export interface MoveAnalysis {
   move: string
   san: string
-  fen: string
+  fen: string // Position after the move (for UI display)
+  fenBeforeMove?: string // Position before the move (for Maia analysis)
   moveNumber: number
   isPlayerMove: boolean
   evaluation: number
@@ -73,6 +74,17 @@ export interface RatingComparison {
   rating: number
   probability: number
   moveMatch: boolean
+  logLikelihood: number // Raw log likelihood score
+  likelihoodProbability: number // Normalized probability based on log likelihood
+  averageMoveProb: number // Average probability of player's moves for this rating
+}
+
+// Enhanced rating prediction with single confident result
+export interface RatingPrediction {
+  predictedRating: number // Single weighted average rating prediction
+  standardDeviation: number // Uncertainty in rating prediction
+  sampleSize: number // Number of moves analyzed
+  ratingDistribution: RatingComparison[] // Full distribution for visualization
 }
 
 // Enhanced evaluation chart data
@@ -117,6 +129,7 @@ export interface DrillPerformanceData {
   // Enhanced feedback data
   moveAnalyses: MoveAnalysis[]
   ratingComparison: RatingComparison[]
+  ratingPrediction: RatingPrediction // New single confident rating prediction
   bestPlayerMoves: MoveAnalysis[]
   worstPlayerMoves: MoveAnalysis[]
   averageEvaluationLoss: number

@@ -301,6 +301,12 @@ export const useOpeningDrillController = (
         feedback,
         moveAnalyses: [],
         ratingComparison: [],
+        ratingPrediction: {
+          predictedRating: 1400,
+          standardDeviation: 200,
+          sampleSize: playerMoveCount,
+          ratingDistribution: [],
+        },
         bestPlayerMoves: [],
         worstPlayerMoves: [],
         averageEvaluationLoss: 0,

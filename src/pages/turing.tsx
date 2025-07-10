@@ -12,7 +12,7 @@ import {
   Loading,
   GameInfo,
   GameBoard,
-  TuringGames,
+  TuringLog,
   StatsDisplay,
   MovesContainer,
   BoardController,
@@ -116,8 +116,8 @@ const Turing: React.FC<Props> = (props: Props) => {
                 {Info}
               </GameInfo>
               <ContinueAgainstMaia launchContinue={launchContinue} />
-              <div className="flex flex-row flex-wrap items-start justify-start gap-1 overflow-y-auto">
-                <TuringGames />
+              <div className="relative bottom-0 flex h-full min-h-[38px] flex-1 flex-col justify-end overflow-auto">
+                <TuringLog />
               </div>
             </div>
             <StatsDisplay stats={stats} />
@@ -204,8 +204,8 @@ const Turing: React.FC<Props> = (props: Props) => {
             </div>
           </div>
         </div>
-        <div className="flex flex-row flex-wrap items-start justify-start gap-1 overflow-y-auto">
-          <TuringGames />
+        <div className="relative bottom-0 flex h-full min-h-[38px] flex-1 flex-col justify-end overflow-auto">
+          <TuringLog />
         </div>
         <StatsDisplay stats={stats} />
       </div>

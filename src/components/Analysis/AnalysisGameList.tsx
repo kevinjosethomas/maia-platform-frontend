@@ -199,7 +199,8 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
             const parsedGames = data.games.map((game: GameData) =>
               parse(game, selected),
             )
-            const calculatedTotalPages = Math.ceil(data.total / 100)
+            const calculatedTotalPages =
+              data.total_pages || Math.ceil(data.total_games / 100)
 
             setTotalPagesCache((prev) => ({
               ...prev,
@@ -207,9 +208,7 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
             }))
 
             if (selected === 'play') {
-              setLocalPlayGames((prev) =>
-                currentPage === 1 ? parsedGames : [...prev, ...parsedGames],
-              )
+              setLocalPlayGames(parsedGames)
             }
             setLoading(false)
           })
@@ -267,7 +266,8 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
             const parsedGames = data.games.map((game: GameData) =>
               parse(game, gameType),
             )
-            const calculatedTotalPages = Math.ceil(data.total / 100)
+            const calculatedTotalPages =
+              data.total_pages || Math.ceil(data.total_games / 100)
 
             setTotalPagesCache((prev) => ({
               ...prev,
@@ -275,13 +275,9 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
             }))
 
             if (gameType === 'hand') {
-              setLocalHandGames((prev) =>
-                currentPage === 1 ? parsedGames : [...prev, ...parsedGames],
-              )
+              setLocalHandGames(parsedGames)
             } else if (gameType === 'brain') {
-              setLocalBrainGames((prev) =>
-                currentPage === 1 ? parsedGames : [...prev, ...parsedGames],
-              )
+              setLocalBrainGames(parsedGames)
             }
             setLoading(false)
           })
@@ -495,7 +491,9 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
                         <div
                           className={`flex h-full w-9 items-center justify-center ${selectedGame ? 'bg-background-3' : 'bg-background-2 group-hover:bg-white/5'}`}
                         >
-                          <p className="text-sm text-secondary">{index + 1}</p>
+                          <p className="text-sm text-secondary">
+                            {(currentPage - 1) * 100 + index + 1}
+                          </p>
                         </div>
                         <div className="flex flex-1 items-center justify-between overflow-hidden py-1">
                           <div className="flex items-center gap-2 overflow-hidden">
@@ -558,13 +556,15 @@ export const AnalysisGameList: React.FC<AnalysisGameListProps> = ({
               )}
             </>
           )}
-          <div className="flex flex-1 items-start justify-center gap-1 py-2 md:items-center">
-            <span className="material-symbols-outlined text-sm text-secondary">
-              chess_pawn
-            </span>
-            <p className="text-xs text-secondary">Play more games...</p>
-            <p className="ml-2 text-xs text-secondary">₍^. .^₎⟆</p>
-          </div>
+          {!((selected === 'play' || selected === 'hb') && totalPages > 1) && (
+            <div className="flex flex-1 items-start justify-center gap-1 py-2 md:items-center">
+              <span className="material-symbols-outlined text-sm text-secondary">
+                chess_pawn
+              </span>
+              <p className="text-xs text-secondary">Play more games...</p>
+              <p className="ml-2 text-xs text-secondary">₍^. .^₎⟆</p>
+            </div>
+          )}
         </div>
         {onCustomAnalysis && (
           <button

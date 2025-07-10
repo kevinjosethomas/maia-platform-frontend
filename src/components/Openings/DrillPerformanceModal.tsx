@@ -19,6 +19,7 @@ import {
 import { ModalContainer } from '../Misc'
 import { DrillPerformanceData, MoveAnalysis } from 'src/types/openings'
 import { cpToWinrate } from 'src/utils/stockfish'
+import { MaiaRatingInsights } from './MaiaRatingInsights'
 
 interface Props {
   performanceData: DrillPerformanceData
@@ -325,14 +326,13 @@ const AnimatedGameReplay: React.FC<{
   return (
     <div className="flex h-full flex-col">
       {/* Game Replay Section with padding */}
-      <div className="relative p-4">
-        <div>
-          <h3 className="mb-1 text-lg font-semibold">Game Replay</h3>
-          <p className="mb-3 text-sm text-secondary">
+      <div className="relative p-3">
+        <div className="mb-3">
+          <h3 className="text-lg font-semibold">Game Replay</h3>
+          <p className="text-xs text-secondary">
             Watch your opening unfold with move quality indicators
           </p>
         </div>
-
         {/* Move Quality Display - Fixed position in top-right */}
         {currentMoveQuality && currentMoveQuality !== 'good' && (
           <div className="absolute right-4 top-4 z-10 flex rounded border border-white/20 bg-background-1/95 px-2 py-1 shadow-lg">
@@ -618,7 +618,7 @@ const EvaluationChart: React.FC<{
 }) => {
   if (evaluationChart.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center rounded bg-background-2 text-secondary">
+      <div className="flex h-64 items-center justify-center rounded bg-background-2 p-3 text-secondary">
         <p>Evaluation chart unavailable</p>
       </div>
     )
@@ -712,19 +712,18 @@ const EvaluationChart: React.FC<{
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="mb-1 text-lg font-semibold">Position Evaluation</h3>
-        <p className="mb-3 text-sm text-secondary">
-          Track how the position&apos;s value changed throughout the
-          post-opening
+    <div className="flex flex-col gap-3 p-3">
+      <div className="flex flex-col">
+        <h3 className="text-lg font-semibold">Position Evaluation</h3>
+        <p className="text-xs text-secondary">
+          Track how evaluation value changed throughout the drill
         </p>
       </div>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartData}
-            margin={{ top: 15, right: 20, left: -20, bottom: 20 }}
+            margin={{ top: 15, right: 20, left: -20, bottom: 6 }}
             onMouseMove={(data) => {
               if (
                 data &&
@@ -748,6 +747,7 @@ const EvaluationChart: React.FC<{
               label={{
                 value: 'Move Number',
                 position: 'insideBottom',
+                dy: 8,
                 style: {
                   textAnchor: 'middle',
                   fill: '#9ca3af',
@@ -816,18 +816,18 @@ const EvaluationChart: React.FC<{
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-4 text-xs">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap gap-3 text-xs">
+        <div className="flex items-center gap-1">
           <div className="h-3 w-3 rounded-full bg-green-400"></div>
-          <span className="text-secondary">Excellent (!!)</span>
+          <span className="text-secondary">Excellent</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <div className="h-3 w-3 rounded-full bg-yellow-400"></div>
-          <span className="text-secondary">Inaccuracy (?!)</span>
+          <span className="text-secondary">Inaccuracy</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <div className="h-3 w-3 rounded-full bg-red-400"></div>
-          <span className="text-secondary">Blunder (??)</span>
+          <span className="text-secondary">Blunder</span>
         </div>
       </div>
     </div>
@@ -1025,76 +1025,6 @@ const KeyMomentsAnalysis: React.FC<{
           </div>
         </div>
       )}
-
-      {/* Critical Moments Section */}
-      {criticalMoments.length > 0 && (
-        <div>
-          <h3 className="mb-1 text-lg font-semibold">Critical Decisions</h3>
-          <p className="mb-3 text-sm text-secondary">
-            Key moments that shifted the evaluation
-          </p>
-          <div className="space-y-3">
-            {criticalMoments.map((moment) => (
-              <div
-                key={moment.index}
-                className="flex items-center justify-between rounded border border-white/10 p-3"
-              >
-                <div>
-                  <span className="text-base font-medium">
-                    {moment.isWhiteMove
-                      ? `${moment.moveNumber}.`
-                      : `...${moment.moveNumber}.`}{' '}
-                    {moment.moveAnalysis?.san}
-                    <span className="ml-2">
-                      {(() => {
-                        const dynamicClassification = moment.moveAnalysis
-                          ? classifyMove(moment.moveAnalysis, moment.index)
-                          : ''
-
-                        if (dynamicClassification === 'blunder') {
-                          return (
-                            <span className="font-bold text-red-400">?? </span>
-                          )
-                        } else if (dynamicClassification === 'excellent') {
-                          return (
-                            <span className="font-bold text-green-400">
-                              !!{' '}
-                            </span>
-                          )
-                        } else if (dynamicClassification === 'inaccuracy') {
-                          return (
-                            <span className="font-bold text-yellow-400">
-                              ?!{' '}
-                            </span>
-                          )
-                        }
-                        return null
-                      })()}
-                    </span>
-                  </span>
-                  <p className="text-sm text-secondary">
-                    Evaluation swing: {(moment.evalChange / 100).toFixed(1)}
-                  </p>
-                </div>
-                <div className="text-right text-sm">
-                  <div className="text-secondary">
-                    {formatEvaluation(moment.previousEvaluation)} →
-                  </div>
-                  <div
-                    className={
-                      moment.evaluation > moment.previousEvaluation
-                        ? 'text-green-400'
-                        : 'text-red-400'
-                    }
-                  >
-                    {formatEvaluation(moment.evaluation)}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -1226,8 +1156,8 @@ export const DrillPerformanceModal: React.FC<Props> = ({
             />
           </div>
 
-          {/* Center Panel - Evaluation Chart */}
-          <div className="red-scrollbar flex w-1/3 flex-col gap-3 overflow-y-auto border-r border-white/10 p-4">
+          {/* Center Panel - Evaluation Chart & Critical Decisions */}
+          <div className="red-scrollbar flex w-1/3 flex-col overflow-y-auto border-r border-white/10">
             <EvaluationChart
               evaluationChart={filteredEvaluationChart}
               moveAnalyses={filteredMoveAnalyses}
@@ -1235,10 +1165,132 @@ export const DrillPerformanceModal: React.FC<Props> = ({
               onHoverMove={handleChartHover}
               playerColor={drill.selection.playerColor}
             />
+
+            {/* Critical Decisions Section */}
+            {(() => {
+              // Define helper function first
+              const getMoveNumberForIndex = (
+                index: number,
+              ): { moveNumber: number; isWhiteMove: boolean } => {
+                if (index < 0 || index >= filteredMoveAnalyses.length)
+                  return { moveNumber: 1, isWhiteMove: true }
+
+                const moveAnalysis = filteredMoveAnalyses[index]
+                if (!moveAnalysis) return { moveNumber: 1, isWhiteMove: true }
+
+                const isWhiteMove = isMoveByWhite(moveAnalysis.fen)
+                let moveNumber = 1
+                if (isWhiteMove) {
+                  moveNumber = getMoveNumberFromFen(moveAnalysis.fen)
+                } else {
+                  let currentIndex = index - 1
+                  while (currentIndex >= 0) {
+                    const prevMove = filteredMoveAnalyses[currentIndex]
+                    if (isMoveByWhite(prevMove.fen)) {
+                      moveNumber = getMoveNumberFromFen(prevMove.fen)
+                      break
+                    }
+                    currentIndex--
+                  }
+                }
+                return { moveNumber, isWhiteMove }
+              }
+
+              // Calculate critical moments for this column
+              const criticalMoments = filteredEvaluationChart
+                .map((point, index) => {
+                  if (index === 0) return null
+                  const evalChange = Math.abs(
+                    point.evaluation -
+                      filteredEvaluationChart[index - 1].evaluation,
+                  )
+                  const moveAnalysis = filteredMoveAnalyses[index]
+                  const moveInfo = getMoveNumberForIndex(index)
+                  return {
+                    index,
+                    moveNumber: moveInfo.moveNumber,
+                    isWhiteMove: moveInfo.isWhiteMove,
+                    evalChange,
+                    moveAnalysis,
+                    isPlayerMove: point.isPlayerMove,
+                    evaluation: point.evaluation,
+                    previousEvaluation:
+                      filteredEvaluationChart[index - 1].evaluation,
+                  }
+                })
+                .filter(
+                  (moment): moment is NonNullable<typeof moment> =>
+                    moment !== null &&
+                    moment.isPlayerMove &&
+                    moment.evalChange > 50,
+                )
+                .sort((a, b) => b.evalChange - a.evalChange)
+                .slice(0, 3) // Show top 3
+
+              const formatEvaluation = (evaluation: number) => {
+                if (Math.abs(evaluation) >= 1000) {
+                  return evaluation > 0 ? '+M' : '-M'
+                }
+                return evaluation > 0
+                  ? `+${(evaluation / 100).toFixed(1)}`
+                  : `${(evaluation / 100).toFixed(1)}`
+              }
+
+              return criticalMoments.length > 0 ? (
+                <div className="flex w-full flex-col gap-1 border-t border-white/10">
+                  <div className="flex flex-col px-3 pt-3">
+                    <h3 className="text-lg font-semibold">
+                      Critical Decisions
+                    </h3>
+                    <p className="text-xs text-secondary">
+                      Key moments that shifted the evaluation
+                    </p>
+                  </div>
+                  <div className="flex flex-col">
+                    {criticalMoments.map((moment) => (
+                      <div
+                        key={moment.index}
+                        className="flex items-center justify-between border-b border-white/10 px-3 py-2 last:border-b-0"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium">
+                            {moment.isWhiteMove
+                              ? `${moment.moveNumber}.`
+                              : `...${moment.moveNumber}.`}{' '}
+                            {moment.moveAnalysis?.san}
+                          </span>
+                          <span className="text-xs text-secondary">
+                            Swing: {(moment.evalChange / 100).toFixed(1)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-secondary">
+                            {formatEvaluation(moment.previousEvaluation)}
+                          </span>
+                          <span className="text-secondary">→</span>
+                          <span
+                            className={
+                              moment.evaluation > moment.previousEvaluation
+                                ? 'text-green-400'
+                                : 'text-red-400'
+                            }
+                          >
+                            {formatEvaluation(moment.evaluation)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null
+            })()}
           </div>
 
-          {/* Right Panel - Key Moments Analysis */}
+          {/* Right Panel - Maia Rating Insights & Key Moments Analysis */}
           <div className="red-scrollbar flex w-1/3 flex-col gap-3 overflow-y-auto p-4">
+            <MaiaRatingInsights
+              ratingPrediction={performanceData.ratingPrediction}
+            />
             <KeyMomentsAnalysis
               moveAnalyses={filteredMoveAnalyses}
               evaluationChart={filteredEvaluationChart}
