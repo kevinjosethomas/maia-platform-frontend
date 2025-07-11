@@ -8,9 +8,11 @@ interface Props {
   remainingDrills: OpeningSelection[]
   currentDrillIndex: number
   totalDrills: number
+  drillSequence: OpeningSelection[]
   onResetCurrentDrill: () => void
   onChangeSelections?: () => void
   onLoadCompletedDrill?: (drill: CompletedDrill) => void
+  onNavigateToDrill?: (drillIndex: number) => void
 }
 
 export const OpeningDrillSidebar: React.FC<Props> = ({
@@ -19,9 +21,11 @@ export const OpeningDrillSidebar: React.FC<Props> = ({
   remainingDrills,
   currentDrillIndex,
   totalDrills,
+  drillSequence,
   onResetCurrentDrill,
   onChangeSelections,
   onLoadCompletedDrill,
+  onNavigateToDrill,
 }) => {
   return (
     <div className="flex h-full w-full flex-col border-r border-white/10 bg-background-1 2xl:min-w-72">
@@ -59,12 +63,12 @@ export const OpeningDrillSidebar: React.FC<Props> = ({
               <span>{currentDrill.targetMoveNumber} moves</span>
             </div>
             <div className="mt-3 flex gap-2">
-              <button
+              {/* <button
                 onClick={onResetCurrentDrill}
                 className="w-full rounded bg-background-2 py-1 text-xs transition-colors hover:bg-background-3"
               >
                 Reset Drill
-              </button>
+              </button> */}
               {onChangeSelections && (
                 <button
                   onClick={onChangeSelections}
@@ -80,140 +84,115 @@ export const OpeningDrillSidebar: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Drill Progress */}
-      <div className="border-b border-white/10 p-4">
-        <h3 className="mb-2 text-sm font-medium text-primary">
-          Completed Drills ({completedDrills.length})
-        </h3>
-        <div className="space-y-2">
-          <div className="flex justify-between text-xs">
-            <span className="text-secondary">Drill Progress</span>
-            <span className="font-medium text-human-4">
-              {Math.min(completedDrills.length + 1, totalDrills)} of{' '}
-              {totalDrills}
-            </span>
-          </div>
-          <div className="h-2 w-full rounded bg-background-2">
-            <div
-              className="h-full rounded bg-human-4 transition-all duration-300"
-              style={{
-                width: `${
-                  totalDrills > 0
-                    ? Math.min(
-                        (completedDrills.length / totalDrills) * 100,
-                        100,
-                      )
-                    : 0
-                }%`,
-              }}
-            />
-          </div>
+      {/* All Drills List */}
+      <div className="flex h-96 flex-col overflow-hidden">
+        <div className="border-b border-white/10 px-3 py-2">
+          <h3 className="text-sm font-medium text-primary">
+            Drill Progress ({currentDrillIndex + 1} of {totalDrills})
+          </h3>
         </div>
-      </div>
-
-      {/* Completed Drills List */}
-      <div className="flex h-64 flex-col overflow-hidden">
         <div className="red-scrollbar flex h-full flex-col overflow-y-auto">
-          {completedDrills.length === 0 ? (
+          {drillSequence.length === 0 ? (
             <div className="flex h-full items-center justify-center">
               <p className="max-w-[12rem] text-center text-xs text-secondary">
-                Complete your first opening drill to see your progress here
+                No drills selected
               </p>
             </div>
           ) : (
             <div className="flex flex-col">
-              {completedDrills.map((completedDrill, index) => {
-                const accuracy =
-                  completedDrill.totalMoves > 0
-                    ? Math.round(
-                        (completedDrill.goodMoves.length /
-                          completedDrill.totalMoves) *
-                          100,
-                      )
-                    : 0
+              {drillSequence.map((drill, index) => {
+                // Determine drill status
+                const isCurrentDrill = index === currentDrillIndex
+                const isCompleted = completedDrills.some(
+                  (cd) => cd.selection.id === drill.id,
+                )
+                const isIncomplete = index < currentDrillIndex && !isCompleted
 
-                // Check if this drill is currently loaded
-                const isCurrentlyLoaded =
-                  currentDrill &&
-                  currentDrill.opening.id ===
-                    completedDrill.selection.opening.id &&
-                  currentDrill.variation?.id ===
-                    completedDrill.selection.variation?.id &&
-                  currentDrill.playerColor ===
-                    completedDrill.selection.playerColor &&
-                  currentDrill.maiaVersion ===
-                    completedDrill.selection.maiaVersion
+                // Get status info
+                const getStatusInfo = () => {
+                  if (isCompleted) {
+                    return {
+                      label: 'Completed',
+                      color: 'text-green-400',
+                      bgColor: 'bg-green-900/20 hover:bg-green-900/30',
+                    }
+                  } else if (isCurrentDrill) {
+                    return {
+                      label: 'Current',
+                      color: 'text-blue-400',
+                      bgColor: 'bg-blue-900/20 hover:bg-blue-900/30',
+                    }
+                  } else if (isIncomplete) {
+                    return {
+                      label: 'Incomplete',
+                      color: 'text-yellow-400',
+                      bgColor: 'bg-yellow-900/20 hover:bg-yellow-900/30',
+                    }
+                  } else {
+                    return {
+                      label: 'Pending',
+                      color: 'text-secondary',
+                      bgColor: 'bg-background-1 hover:bg-background-2',
+                    }
+                  }
+                }
+
+                const statusInfo = getStatusInfo()
+                const drillNumber = index + 1
 
                 return (
                   <button
-                    key={completedDrill.selection.id}
+                    key={drill.id}
                     className={`w-full border-b border-white/5 px-3 py-2 text-left transition-colors ${
-                      isCurrentlyLoaded
+                      isCurrentDrill
                         ? 'border-human-4/30 bg-human-4/20'
-                        : 'bg-background-1'
+                        : statusInfo.bgColor
                     } ${
-                      onLoadCompletedDrill
-                        ? 'cursor-pointer hover:bg-background-2'
-                        : ''
+                      onNavigateToDrill ? 'cursor-pointer' : 'cursor-default'
                     }`}
-                    onClick={() => onLoadCompletedDrill?.(completedDrill)}
-                    disabled={!onLoadCompletedDrill}
+                    onClick={() => onNavigateToDrill?.(index)}
+                    disabled={!onNavigateToDrill}
                   >
                     <div className="flex items-start justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium text-primary">
-                          {completedDrill.selection.opening.name}
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-medium text-primary">
+                            Drill #{drillNumber}
+                          </p>
+                          <span
+                            className={`text-xs font-medium ${statusInfo.color}`}
+                          >
+                            {statusInfo.label}
+                          </span>
+                        </div>
+                        <p className="text-xs text-primary">
+                          {drill.opening.name}
                         </p>
-                        {completedDrill.selection.variation && (
+                        {drill.variation && (
                           <p className="text-xs text-secondary">
-                            {completedDrill.selection.variation.name}
+                            {drill.variation.name}
                           </p>
                         )}
                         <div className="mt-1 flex items-center gap-2 text-xs">
                           <div className="relative h-3 w-3">
                             <Image
                               src={
-                                completedDrill.selection.playerColor === 'white'
+                                drill.playerColor === 'white'
                                   ? '/assets/pieces/white king.svg'
                                   : '/assets/pieces/black king.svg'
                               }
                               fill={true}
-                              alt={`${completedDrill.selection.playerColor} king`}
+                              alt={`${drill.playerColor} king`}
                             />
                           </div>
                           <span className="text-secondary">
-                            vs Maia{' '}
-                            {completedDrill.selection.maiaVersion.replace(
-                              'maia_kdd_',
-                              '',
-                            )}
+                            vs Maia {drill.maiaVersion.replace('maia_kdd_', '')}
+                          </span>
+                          <span className="text-secondary">
+                            • {drill.targetMoveNumber} moves
                           </span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div
-                          className={`text-xs font-bold ${
-                            accuracy >= 80
-                              ? 'text-green-400'
-                              : accuracy >= 60
-                                ? 'text-yellow-400'
-                                : 'text-red-400'
-                          }`}
-                        >
-                          {accuracy}%
-                        </div>
-                        <div className="text-xs text-secondary">
-                          {completedDrill.totalMoves} moves
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-1 flex gap-4 text-xs">
-                      <span className="text-green-400">
-                        ✓ {completedDrill.goodMoves.length}
-                      </span>
-                      <span className="text-red-400">
-                        ✗ {completedDrill.blunders.length}
-                      </span>
                     </div>
                   </button>
                 )

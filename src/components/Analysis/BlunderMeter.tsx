@@ -81,7 +81,7 @@ const DesktopBlunderMeter: React.FC<Props> = ({
           />
           <Meter
             hover={hover}
-            title="Meh Moves"
+            title="OK Moves"
             makeMove={makeMove}
             moves={data.okMoves.moves}
             bgColor="bg-[#fee08b]"
@@ -136,7 +136,7 @@ const MobileBlunderMeter: React.FC<Props> = ({
             />
             <HorizontalMeter
               hover={hover}
-              title="Meh Moves"
+              title="OK Moves"
               makeMove={makeMove}
               moves={data.okMoves.moves}
               bgColor="bg-[#fee08b]"
@@ -167,7 +167,7 @@ const MobileBlunderMeter: React.FC<Props> = ({
             moveEvaluation={moveEvaluation}
           />
           <MovesList
-            title="Meh Moves"
+            title="OK Moves"
             textColor="text-[#fee08b]"
             moves={data.okMoves.moves}
             hover={hover}

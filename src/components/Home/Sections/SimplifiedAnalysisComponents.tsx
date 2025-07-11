@@ -463,7 +463,7 @@ export const SimplifiedBlunderMeter = () => {
       </div>
       <div className="flex justify-between px-1 text-xs text-primary/60">
         <span>Best Moves</span>
-        <span>Meh Moves</span>
+        <span>OK Moves</span>
         <span>Blunder Moves</span>
       </div>
     </div>

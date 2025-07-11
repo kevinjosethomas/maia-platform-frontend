@@ -10,6 +10,7 @@ class Engine {
   private isEvaluating: boolean
   private stockfish: StockfishWeb | null = null
   private isReady = false
+  private nnueLoaded = false
 
   private store: {
     [key: string]: StockfishEvaluation
@@ -43,6 +44,7 @@ class Engine {
         stockfish.onError = this.onError
         stockfish.listen = this.onMessage
         this.isReady = true
+        this.nnueLoaded = true
       })
       .catch((error) => {
         console.error('Failed to initialize Stockfish:', error)
@@ -51,7 +53,7 @@ class Engine {
   }
 
   get ready(): boolean {
-    return this.isReady && this.stockfish !== null
+    return this.isReady && this.stockfish !== null && this.nnueLoaded
   }
 
   async *streamEvaluations(
@@ -74,8 +76,11 @@ class Engine {
       this.evaluationGenerator = this.createEvaluationGenerator()
 
       this.sendMessage('stop')
+      await this.waitForReady()
       this.sendMessage('ucinewgame')
+      await this.waitForReady()
       this.sendMessage(`position fen ${fen}`)
+      await this.waitForReady()
       this.sendMessage('go depth 18')
 
       while (this.isEvaluating) {
@@ -107,8 +112,34 @@ class Engine {
 
   private sendMessage(message: string) {
     if (this.stockfish) {
+      console.warn(message)
       this.stockfish.uci(message)
     }
+  }
+
+  private async waitForReady(): Promise<void> {
+    if (!this.stockfish) return
+
+    return new Promise((resolve) => {
+      const originalListen = this.stockfish?.listen
+      if (!this.stockfish || !originalListen) {
+        resolve()
+        return
+      }
+
+      this.stockfish.listen = (msg: string) => {
+        if (msg.includes('readyok')) {
+          if (this.stockfish) {
+            this.stockfish.listen = originalListen
+          }
+          resolve()
+        } else {
+          originalListen(msg)
+        }
+      }
+
+      this.stockfish.uci('isready')
+    })
   }
 
   private onMessage(msg: string) {
@@ -287,20 +318,26 @@ const setupStockfish = (): Promise<StockfishWeb> => {
           locateFile: (name: string) => `/stockfish/${name}`,
         })
         .then(async (instance: StockfishWeb) => {
-          instance
+          // Load NNUE models before resolving
           Promise.all([
             fetch(`/stockfish/${instance.getRecommendedNnue(0)}`),
             fetch(`/stockfish/${instance.getRecommendedNnue(1)}`),
-          ]).then((responses) => {
-            Promise.all([
-              responses[0].arrayBuffer(),
-              responses[1].arrayBuffer(),
-            ]).then((buffers) => {
+          ])
+            .then((responses) => {
+              return Promise.all([
+                responses[0].arrayBuffer(),
+                responses[1].arrayBuffer(),
+              ])
+            })
+            .then((buffers) => {
               instance.setNnueBuffer(new Uint8Array(buffers[0]), 0)
               instance.setNnueBuffer(new Uint8Array(buffers[1]), 1)
+              resolve(instance)
             })
-          })
-          resolve(instance)
+            .catch((error) => {
+              console.error('Failed to load NNUE models:', error)
+              reject(error)
+            })
         })
     })
   })

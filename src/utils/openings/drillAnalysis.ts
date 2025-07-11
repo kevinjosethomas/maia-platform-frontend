@@ -189,26 +189,21 @@ async function createRatingPrediction(
     throw error
   }
 
-  // Calculate weighted average rating prediction using log likelihood
-  const weightedSum = ratingDistribution.reduce(
-    (sum, item) => sum + item.rating * item.likelihoodProbability,
-    0,
+  // Find the rating level with the highest log likelihood (most likely level)
+  const mostLikelyRating = ratingDistribution.reduce((best, current) =>
+    current.logLikelihood > best.logLikelihood ? current : best,
   )
-  const totalWeight = ratingDistribution.reduce(
-    (sum, item) => sum + item.likelihoodProbability,
-    0,
-  )
-  const predictedRating = Math.round(weightedSum / totalWeight)
+  const predictedRating = mostLikelyRating.rating
 
-  // Calculate standard deviation (uncertainty) using likelihood probabilities
-  const variance =
-    ratingDistribution.reduce(
-      (sum, item) =>
-        sum +
-        item.likelihoodProbability * Math.pow(item.rating - predictedRating, 2),
-      0,
-    ) / totalWeight
-  const standardDeviation = Math.sqrt(variance)
+  // Calculate standard deviation (uncertainty) based on spread of likelihood probabilities
+  // This gives a sense of how confident we are in the prediction
+  const weightedVariance = ratingDistribution.reduce(
+    (sum, item) =>
+      sum +
+      item.likelihoodProbability * Math.pow(item.rating - predictedRating, 2),
+    0,
+  )
+  const standardDeviation = Math.sqrt(weightedVariance)
 
   return {
     predictedRating,
@@ -224,7 +219,7 @@ async function createRatingPrediction(
 async function analyzeMaiaData(
   playerMoves: MoveAnalysis[],
   maiaResults: MaiaEvaluation[],
-  positionsBeforePlayerMoves: string[],
+  _positionsBeforePlayerMoves: string[],
 ): Promise<RatingComparison[]> {
   const ratingMatches: { [rating: number]: number } = {}
   const logLikelihoods: { [rating: number]: number } = {}
@@ -311,7 +306,6 @@ function smoothLogLikelihoods(logLikelihoods: { [rating: number]: number }): {
 
   // Apply mild smoothing to adjacent ratings
   const smoothingFactor = 0.1
-  const beforeSmoothing = { ...smoothed }
   MAIA_RATINGS.forEach((rating, index) => {
     let smoothedValue = smoothed[rating] * (1 - smoothingFactor)
 
@@ -425,6 +419,20 @@ export async function analyzeDrillPerformance(
       thresholds: number[],
     ) => Promise<{ result: MaiaEvaluation[]; time: number }>
   },
+  analysisCache?: Map<
+    string,
+    {
+      fen: string
+      stockfish: StockfishEvaluation | null
+      maia: MaiaEvaluation | null
+      timestamp: number
+    }
+  >,
+  onProgress?: (progress: {
+    completed: number
+    total: number
+    currentStep: string
+  }) => void,
 ): Promise<DrillPerformanceData> {
   try {
     // Reconstruct the game path for analysis
@@ -445,12 +453,29 @@ export async function analyzeDrillPerformance(
     const evaluationChart: EvaluationPoint[] = []
     let previousEvaluation: number | null = null
 
+    // Initialize progress tracking
+    const totalPositions = gameNodes.length - 1
+    let completedPositions = 0
+
+    onProgress?.({
+      completed: 0,
+      total: totalPositions,
+      currentStep: 'Analyzing positions...',
+    })
+
     // Analyze each position
     for (let i = 0; i < gameNodes.length - 1; i++) {
       const currentGameNode = gameNodes[i]
       const nextNode = gameNodes[i + 1]
 
       if (!nextNode.move || !nextNode.san) continue
+
+      // Update progress
+      onProgress?.({
+        completed: completedPositions,
+        total: totalPositions,
+        currentStep: `Analyzing move ${i + 1}/${totalPositions}...`,
+      })
 
       // Use the position after the move to determine who made the move
       const chess = new Chess(nextNode.fen)
@@ -459,11 +484,16 @@ export async function analyzeDrillPerformance(
           ? chess.turn() === 'b' // If Black is to move, White just moved
           : chess.turn() === 'w' // If White is to move, Black just moved
 
-      // Get or calculate Stockfish evaluation for this position
-      let evaluation: StockfishEvaluation | null =
-        currentGameNode.analysis?.stockfish || null
+      // Check cache first, then get or calculate Stockfish evaluation
+      let evaluation: StockfishEvaluation | null = null
+      const cachedAnalysis = analysisCache?.get(currentGameNode.fen)
 
-      if (!evaluation || evaluation.depth < 12) {
+      if (cachedAnalysis?.stockfish) {
+        evaluation = cachedAnalysis.stockfish
+      } else if (currentGameNode.analysis?.stockfish) {
+        evaluation = currentGameNode.analysis.stockfish
+      } else {
+        // Only analyze if not in cache - this should be rare now
         evaluation = await analyzePosition(
           currentGameNode.fen,
           streamEvaluations,
@@ -478,10 +508,19 @@ export async function analyzeDrillPerformance(
         const bestEval = evaluation.model_optimal_cp
         const evaluationLoss = playedMoveEval - bestEval
 
-        // Get Maia best move if available
+        // Get Maia best move if available - check cache first
         let maiaBestMove: string | undefined
         try {
-          if (maia) {
+          if (cachedAnalysis?.maia) {
+            // Use cached Maia analysis
+            const maiaEval = cachedAnalysis.maia
+            if (maiaEval.policy && Object.keys(maiaEval.policy).length > 0) {
+              maiaBestMove = Object.keys(maiaEval.policy).reduce((a, b) =>
+                maiaEval.policy[a] > maiaEval.policy[b] ? a : b,
+              )
+            }
+          } else if (maia) {
+            // Only fetch if not cached
             const maiaResult = await maia.batchEvaluate(
               [currentGameNode.fen],
               [1500], // Use 1500 rating for best move
@@ -489,7 +528,11 @@ export async function analyzeDrillPerformance(
             )
             if (maiaResult.result.length > 0) {
               const maiaEval = maiaResult.result[0]
-              maiaBestMove = Object.keys(maiaEval.policy)[0]
+              if (maiaEval.policy && Object.keys(maiaEval.policy).length > 0) {
+                maiaBestMove = Object.keys(maiaEval.policy).reduce((a, b) =>
+                  maiaEval.policy[a] > maiaEval.policy[b] ? a : b,
+                )
+              }
             }
           }
         } catch (error) {
@@ -539,6 +582,14 @@ export async function analyzeDrillPerformance(
         // Update previous evaluation for next iteration
         previousEvaluation = playedMoveEval
       }
+
+      // Update progress
+      completedPositions++
+      onProgress?.({
+        completed: completedPositions,
+        total: totalPositions,
+        currentStep: `Analyzed move ${completedPositions}/${totalPositions}`,
+      })
     }
 
     // Calculate performance metrics
@@ -585,6 +636,11 @@ export async function analyzeDrillPerformance(
         : 100
 
     // Get enhanced rating prediction and comparison
+    onProgress?.({
+      completed: totalPositions,
+      total: totalPositions + 1,
+      currentStep: 'Calculating rating prediction...',
+    })
     const ratingPrediction = await createRatingPrediction(moveAnalyses, maia)
     const ratingComparison = ratingPrediction.ratingDistribution
 

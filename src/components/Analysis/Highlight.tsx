@@ -205,7 +205,7 @@ export const Highlight: React.FC<Props> = ({
         <div className="flex flex-col items-center justify-start gap-0.5 bg-engine-3/5 xl:gap-1">
           <div className="flex w-full flex-col border-b border-white/5 py-2">
             <p className="whitespace-nowrap text-center font-semibold text-engine-1 md:text-[10px] lg:text-xs">
-              Stockfish{' '}
+              Stockfish 17{' '}
               {moveEvaluation?.stockfish?.depth
                 ? ` (D${moveEvaluation.stockfish?.depth})`
                 : ''}

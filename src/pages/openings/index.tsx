@@ -455,6 +455,7 @@ const OpeningsPage: NextPage = () => {
               onResetCurrentDrill={controller.resetCurrentDrill}
               onChangeSelections={handleChangeSelections}
               onLoadCompletedDrill={controller.loadCompletedDrill}
+              drillSequence={controller.drillSequence}
             />
           </div>
 
@@ -709,6 +710,45 @@ const OpeningsPage: NextPage = () => {
         {isMobile ? mobileLayout() : desktopLayout()}
       </TreeControllerContext.Provider>
 
+      {/* Background Analysis Progress Indicator */}
+      <AnimatePresence>
+        {controller.analysisProgress.total > 0 &&
+          controller.analysisProgress.completed <
+            controller.analysisProgress.total && (
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className="fixed bottom-4 right-4 z-40 max-w-xs rounded-lg border border-white/20 bg-background-1 p-4 shadow-lg"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-human-4 border-t-transparent"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Background Analysis</p>
+                  <p className="text-xs text-secondary">
+                    {controller.analysisProgress.completed}/
+                    {controller.analysisProgress.total} positions
+                  </p>
+                </div>
+              </div>
+              <div className="mt-2 h-1 w-full rounded bg-background-3">
+                <div
+                  className="h-full rounded bg-human-4 transition-all duration-300"
+                  style={{
+                    width: `${
+                      controller.analysisProgress.total > 0
+                        ? (controller.analysisProgress.completed /
+                            controller.analysisProgress.total) *
+                          100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+            </motion.div>
+          )}
+      </AnimatePresence>
+
       {/* Analysis Loading Overlay */}
       <AnimatePresence>
         {controller.isAnalyzingDrill && (
@@ -718,15 +758,45 @@ const OpeningsPage: NextPage = () => {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
           >
-            <div className="flex flex-col items-center gap-4 rounded-lg bg-background-1 p-8 shadow-2xl">
+            <div className="flex max-w-md flex-col items-center gap-4 rounded-lg bg-background-1 p-8 shadow-2xl">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-human-4 border-t-transparent"></div>
               <div className="text-center">
                 <h3 className="text-lg font-semibold">
-                  Analyzing Your Performance
+                  Finalizing Performance Analysis
                 </h3>
                 <p className="text-sm text-secondary">
-                  Running analysis with Stockfish and Maia...
+                  {controller.analysisProgress.currentMove ||
+                    'Aggregating cached analysis results...'}
                 </p>
+                {controller.analysisProgress.total > 0 && (
+                  <div className="mt-3 w-full">
+                    <div className="mb-1 flex justify-between text-xs text-secondary">
+                      <span>Progress</span>
+                      <span>
+                        {Math.round(
+                          (controller.analysisProgress.completed /
+                            controller.analysisProgress.total) *
+                            100,
+                        )}
+                        %
+                      </span>
+                    </div>
+                    <div className="h-2 w-full rounded bg-background-3">
+                      <div
+                        className="h-full rounded bg-human-4 transition-all duration-300"
+                        style={{
+                          width: `${
+                            controller.analysisProgress.total > 0
+                              ? (controller.analysisProgress.completed /
+                                  controller.analysisProgress.total) *
+                                100
+                              : 0
+                          }%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>

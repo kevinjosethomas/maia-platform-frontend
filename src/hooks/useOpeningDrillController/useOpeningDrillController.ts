@@ -1,11 +1,16 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
-import { Chess, PieceSymbol } from 'chess.ts'
+import { Chess } from 'chess.ts'
 import { getGameMove } from 'src/api/play/play'
 import { useTreeController } from '../useTreeController'
 import { useChessSound } from '../useChessSound'
 import { useStockfishEngine } from '../useStockfishEngine'
 import { useMaiaEngine } from '../useMaiaEngine'
-import { GameTree, GameNode } from 'src/types'
+import {
+  GameTree,
+  GameNode,
+  StockfishEvaluation,
+  MaiaEvaluation,
+} from 'src/types'
 import {
   OpeningSelection,
   OpeningDrillGame,
@@ -15,6 +20,21 @@ import {
   DrillConfiguration,
 } from 'src/types/openings'
 import { analyzeDrillPerformance } from 'src/utils/openings/drillAnalysis'
+
+// Type for cached analysis results
+interface CachedAnalysisResult {
+  fen: string
+  stockfish: StockfishEvaluation | null
+  maia: MaiaEvaluation | null
+  timestamp: number
+}
+
+// Type for analysis progress
+interface AnalysisProgress {
+  total: number
+  completed: number
+  currentMove: string | null
+}
 
 // Helper function to parse PGN and create moves in the tree
 const parsePgnToTree = (pgn: string, gameTree: GameTree): GameNode | null => {
@@ -64,14 +84,105 @@ const parsePgnToTree = (pgn: string, gameTree: GameTree): GameNode | null => {
   return currentNode
 }
 
-// Helper function to shuffle array
-const shuffleArray = <T>(array: T[]): T[] => {
-  const shuffled = [...array]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+// Background analysis function to analyze positions as they're reached
+const analyzePositionInBackground = async (
+  fen: string,
+  streamEvaluations: (
+    fen: string,
+    moveCount: number,
+  ) => AsyncIterable<StockfishEvaluation> | null,
+  maia: {
+    batchEvaluate: (
+      fens: string[],
+      ratingLevels: number[],
+      thresholds: number[],
+    ) => Promise<{ result: MaiaEvaluation[]; time: number }>
+  },
+  analysisCache: React.RefObject<Map<string, CachedAnalysisResult>>,
+  analysisQueue: React.RefObject<Set<string>>,
+  setAnalysisProgress: React.Dispatch<React.SetStateAction<AnalysisProgress>>,
+) => {
+  // Skip if already analyzed or in queue
+  if (analysisCache.current?.has(fen) || analysisQueue.current?.has(fen)) {
+    return
   }
-  return shuffled
+
+  analysisQueue.current?.add(fen)
+
+  try {
+    const chess = new Chess(fen)
+    const moveCount = chess.moves().length
+
+    if (moveCount === 0) {
+      analysisQueue.current?.delete(fen)
+      return
+    }
+
+    // Update progress
+    setAnalysisProgress((prev) => ({
+      ...prev,
+      total: prev.total + 1,
+      currentMove: chess.turn() === 'w' ? 'White to move' : 'Black to move',
+    }))
+
+    const analysisResult: CachedAnalysisResult = {
+      fen,
+      stockfish: null,
+      maia: null,
+      timestamp: Date.now(),
+    }
+
+    // Analyze with Stockfish (target depth 15)
+    if (streamEvaluations) {
+      try {
+        const evaluationStream = streamEvaluations(fen, moveCount)
+        if (evaluationStream) {
+          let bestEvaluation: StockfishEvaluation | null = null
+          const timeout = setTimeout(() => {
+            analysisResult.stockfish = bestEvaluation
+          }, 5000) // 5 second timeout
+
+          for await (const evaluation of evaluationStream) {
+            bestEvaluation = evaluation
+            if (evaluation.depth >= 15) {
+              clearTimeout(timeout)
+              break
+            }
+          }
+
+          analysisResult.stockfish = bestEvaluation
+        }
+      } catch (error) {
+        console.warn('Background Stockfish analysis failed:', error)
+      }
+    }
+
+    // Analyze with Maia (1500 rating for best move)
+    if (maia) {
+      try {
+        const maiaResult = await maia.batchEvaluate([fen], [1500], [0.1])
+        if (maiaResult.result.length > 0) {
+          analysisResult.maia = maiaResult.result[0]
+        }
+      } catch (error) {
+        console.warn('Background Maia analysis failed:', error)
+      }
+    }
+
+    // Cache the result
+    analysisCache.current?.set(fen, analysisResult)
+
+    // Update progress
+    setAnalysisProgress((prev) => ({
+      ...prev,
+      completed: prev.completed + 1,
+      currentMove: null,
+    }))
+  } catch (error) {
+    console.error('Background analysis error:', error)
+  } finally {
+    analysisQueue.current?.delete(fen)
+  }
 }
 
 export const useOpeningDrillController = (
@@ -101,6 +212,15 @@ export const useOpeningDrillController = (
 
   // Flag to track if player chose to continue analyzing past the target move count
   const [continueAnalyzingMode, setContinueAnalyzingMode] = useState(false)
+
+  // Background analysis state
+  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>({
+    total: 0,
+    completed: 0,
+    currentMove: null,
+  })
+  const analysisQueue = useRef<Set<string>>(new Set()) // Track which positions are being analyzed
+  const analysisCache = useRef<Map<string, CachedAnalysisResult>>(new Map()) // Cache analysis results by FEN
 
   // Add chess sound hook
   const { playSound } = useChessSound()
@@ -154,7 +274,7 @@ export const useOpeningDrillController = (
     setCurrentDrillGame(drillGame)
     setWaitingForMaiaResponse(false)
     setContinueAnalyzingMode(false) // Reset continue analyzing mode for new drill
-  }, [currentDrill, allDrillsCompleted])
+  }, [currentDrill?.id, allDrillsCompleted])
 
   // Use the current drill game's tree, or create a default one
   const gameTree = currentDrillGame?.tree || new GameTree(new Chess().fen())
@@ -241,6 +361,14 @@ export const useOpeningDrillController = (
             finalNode,
             streamEvaluations,
             maia,
+            analysisCache.current || new Map(),
+            (progress) => {
+              // Update analysis progress for UI feedback
+              setAnalysisProgress((prev) => ({
+                ...prev,
+                currentMove: progress.currentStep,
+              }))
+            },
           )
         }
       } catch (error) {
@@ -372,7 +500,9 @@ export const useOpeningDrillController = (
 
     // Check if there are more drills to complete
     if (nextIndex < configuration.drillSequence.length) {
-      setCurrentDrill(configuration.drillSequence[nextIndex])
+      const nextDrill = configuration.drillSequence[nextIndex]
+
+      setCurrentDrill(nextDrill)
       setCurrentDrillIndex(nextIndex)
     } else {
       // All drills completed - show final modal
@@ -414,6 +544,11 @@ export const useOpeningDrillController = (
     setShowFinalModal(false)
     setCurrentPerformanceData(null)
     setWaitingForMaiaResponse(false)
+
+    // Clear analysis cache and progress
+    analysisCache.current.clear()
+    analysisQueue.current.clear()
+    setAnalysisProgress({ total: 0, completed: 0, currentMove: null })
   }, [])
 
   // Load a specific completed drill for analysis
@@ -542,6 +677,66 @@ export const useOpeningDrillController = (
       }, 50) // Shorter delay to ensure state is synchronized
     },
     [controller, currentDrillGame],
+  )
+
+  // Navigate to any drill by index in the sequence
+  const navigateToDrill = useCallback(
+    (drillIndex: number) => {
+      if (drillIndex < 0 || drillIndex >= configuration.drillSequence.length) {
+        return
+      }
+
+      // If navigating to a drill that was already completed, use loadCompletedDrill
+      const targetDrill = configuration.drillSequence[drillIndex]
+      const completedDrill = completedDrills.find(
+        (cd) => cd.selection.id === targetDrill.id,
+      )
+
+      if (completedDrill) {
+        // This drill was already completed, load it for analysis
+        loadCompletedDrill(completedDrill)
+        setCurrentDrillIndex(drillIndex)
+        return
+      }
+
+      // If navigating to an incomplete drill, set it as current
+      setCurrentDrill(targetDrill)
+      setCurrentDrillIndex(drillIndex)
+
+      // Reset game state for the new drill
+      const startingFen =
+        'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+      const gameTree = new GameTree(startingFen)
+
+      const pgn = targetDrill.variation
+        ? targetDrill.variation.pgn
+        : targetDrill.opening.pgn
+      const endNode = parsePgnToTree(pgn, gameTree)
+
+      const newGame: OpeningDrillGame = {
+        id: targetDrill.id,
+        selection: targetDrill,
+        moves: [],
+        tree: gameTree,
+        currentFen: endNode?.fen || startingFen,
+        toPlay: endNode
+          ? new Chess(endNode.fen).turn() === 'w'
+            ? 'white'
+            : 'black'
+          : 'white',
+        openingEndNode: endNode,
+        playerMoveCount: 0,
+      }
+
+      setCurrentDrillGame(newGame)
+      setAnalysisEnabled(false)
+      setContinueAnalyzingMode(false)
+      setWaitingForMaiaResponse(false)
+
+      // Update remaining drills to match the current position
+      setRemainingDrills(configuration.drillSequence.slice(drillIndex))
+    },
+    [configuration.drillSequence, completedDrills, loadCompletedDrill],
   )
 
   // Calculate overall performance data
@@ -717,7 +912,7 @@ export const useOpeningDrillController = (
               (openingChess.turn() === 'w') ===
               (currentDrill?.playerColor === 'white')
 
-            for (const moveNode of movesAfterOpening) {
+            for (const _moveNode of movesAfterOpening) {
               if (isPlayerTurn) {
                 playerMoveCount++
               }
@@ -738,6 +933,18 @@ export const useOpeningDrillController = (
 
           // Update completed drill if this is a loaded completed drill
           updateCompletedDrill(updatedGame)
+
+          // Trigger background analysis for the new position
+          if (streamEvaluations && maia) {
+            analyzePositionInBackground(
+              newNode.fen,
+              streamEvaluations,
+              maia,
+              analysisCache,
+              analysisQueue,
+              setAnalysisProgress,
+            )
+          }
 
           // Set flag to indicate we're waiting for Maia's response (after player move, it becomes Maia's turn)
           setWaitingForMaiaResponse(true)
@@ -841,7 +1048,7 @@ export const useOpeningDrillController = (
                 (openingChess.turn() === 'w') ===
                 (currentDrill?.playerColor === 'white')
 
-              for (const moveNode of movesAfterOpening) {
+              for (const _moveNode of movesAfterOpening) {
                 if (isPlayerTurn) {
                   playerMoveCount++
                 }
@@ -862,6 +1069,18 @@ export const useOpeningDrillController = (
 
             // Update completed drill if this is a loaded completed drill
             updateCompletedDrill(updatedGame)
+
+            // Trigger background analysis for the new position
+            if (streamEvaluations && maia) {
+              analyzePositionInBackground(
+                newNode.fen,
+                streamEvaluations,
+                maia,
+                analysisCache,
+                analysisQueue,
+                setAnalysisProgress,
+              )
+            }
 
             // Clear the waiting flag since Maia has responded
             setWaitingForMaiaResponse(false)
@@ -976,6 +1195,7 @@ export const useOpeningDrillController = (
     currentDrillGame,
     currentDrillIndex,
     totalDrills: configuration.drillCount,
+    drillSequence: configuration.drillSequence,
     isPlayerTurn,
     isDrillComplete,
     isAtOpeningEnd,
@@ -1006,6 +1226,7 @@ export const useOpeningDrillController = (
     // Analysis
     analysisEnabled,
     setAnalysisEnabled,
+    analysisProgress,
 
     // Modal states
     showPerformanceModal,
@@ -1023,6 +1244,9 @@ export const useOpeningDrillController = (
 
     // Load a specific completed drill for analysis
     loadCompletedDrill,
+
+    // Navigate to any drill by index
+    navigateToDrill,
 
     // Show final summary modal
     showSummary,

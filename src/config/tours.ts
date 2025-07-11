@@ -34,6 +34,14 @@ export const analysisTourSteps: TourStep[] = [
     placement: 'left',
   },
   {
+    id: 'analysis-move-colors',
+    title: 'Move Color Coding',
+    description:
+      'All moves throughout the analysis are color-coded based on their quality according to Stockfish evaluation. Green moves are good (minimal evaluation loss), orange/yellow moves are okay or inaccurate (moderate loss), and red moves are blunders (significant loss). Darker shades within each color indicate better moves. This consistent color system helps you quickly identify move quality across all analysis panels.',
+    targetId: 'analysis-highlight',
+    placement: 'top',
+  },
+  {
     id: 'analysis-move-map',
     title: 'Move Map',
     description:

@@ -55,6 +55,8 @@ interface TourProviderProps {
 
 export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const [isClient, setIsClient] = useState(false)
+  const [isDownloadModalVisible, setIsDownloadModalVisible] = useState(false)
+  const [modalJustHidden, setModalJustHidden] = useState(false)
   const [tourState, setTourState] = useState<TourState>({
     isActive: false,
     currentStep: 0,
@@ -82,6 +84,38 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         ready: true,
       }))
     }
+  }, [isClient])
+
+  // Monitor download modal visibility
+  useEffect(() => {
+    if (!isClient) return
+
+    const checkModal = () => {
+      const modal = document.querySelector('[data-testid="download-modal"]')
+      const modalVisible = !!modal
+
+      if (isDownloadModalVisible && !modalVisible) {
+        // Modal just became hidden, add a short delay
+        setModalJustHidden(true)
+        setTimeout(() => {
+          setModalJustHidden(false)
+        }, 500)
+      }
+
+      setIsDownloadModalVisible(modalVisible)
+    }
+
+    // Check immediately
+    checkModal()
+
+    // Set up an observer to watch for DOM changes
+    const observer = new MutationObserver(checkModal)
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    })
+
+    return () => observer.disconnect()
   }, [isClient])
 
   const [joyrideSteps, setJoyrideSteps] = useState<Step[]>([])
@@ -236,7 +270,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const startTour = useCallback(
     (tourId: string, steps: TourStep[], forceRestart = false) => {
       // For force restart (manual starts), only check if client is ready
-      // For automatic starts, check both client and tour ready state
+      // For automatic starts, check if tours are ready
       if (!isClient || (!forceRestart && !tourState.ready)) {
         return
       }
@@ -534,10 +568,16 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     ],
   )
 
+  const shouldShowJoyride = useMemo(() => {
+    if (!isClient || !tourState.isActive) return false
+    // Don't show joyride if download modal is visible or just hidden
+    return !isDownloadModalVisible && !modalJustHidden
+  }, [isClient, tourState.isActive, isDownloadModalVisible, modalJustHidden])
+
   return (
     <TourContext.Provider value={contextValue}>
       {children}
-      {isClient && (
+      {shouldShowJoyride && (
         <Joyride
           run={tourState.isActive}
           steps={joyrideSteps}

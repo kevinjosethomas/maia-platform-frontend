@@ -1250,7 +1250,16 @@ export const DrillPerformanceModal: React.FC<Props> = ({
                     {criticalMoments.map((moment) => (
                       <div
                         key={moment.index}
-                        className="flex items-center justify-between border-b border-white/10 px-3 py-2 last:border-b-0"
+                        role="button"
+                        tabIndex={0}
+                        className="flex cursor-pointer items-center justify-between border-b border-white/10 px-3 py-2 transition-colors last:border-b-0 hover:bg-background-2"
+                        onClick={() => handleMoveClick(moment.index)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            handleMoveClick(moment.index)
+                          }
+                        }}
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-sm font-medium">

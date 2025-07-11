@@ -706,21 +706,43 @@ export const OpeningSelectionModal: React.FC<Props> = ({
     count: number,
   ): OpeningSelection[] => {
     if (selections.length === 0) return []
+
+    // Create unique drill objects with timestamps to ensure unique IDs
+    const createUniqueDrill = (
+      selection: OpeningSelection,
+      index: number,
+    ): OpeningSelection => {
+      const timestamp = Date.now()
+      const uniqueId = `${selection.id}-${timestamp}-${index}`
+      return {
+        ...selection,
+        id: uniqueId, // Create unique ID for each drill instance
+      }
+    }
+
     if (count <= selections.length) {
       // If drill count is less than or equal to selections, just shuffle and take the required amount
       const shuffled = [...selections].sort(() => Math.random() - 0.5)
-      return shuffled.slice(0, count)
+      return shuffled
+        .slice(0, count)
+        .map((selection, index) => createUniqueDrill(selection, index))
     }
 
     // If drill count is more than selections, ensure each opening is played at least once
-    const sequence: OpeningSelection[] = [...selections]
+    const sequence: OpeningSelection[] = []
+
+    // Add each selection once
+    selections.forEach((selection, index) => {
+      sequence.push(createUniqueDrill(selection, index))
+    })
+
     const remaining = count - selections.length
 
     // Fill remaining slots by randomly picking from selections
     for (let i = 0; i < remaining; i++) {
       const randomSelection =
         selections[Math.floor(Math.random() * selections.length)]
-      sequence.push(randomSelection)
+      sequence.push(createUniqueDrill(randomSelection, selections.length + i))
     }
 
     // Shuffle the final sequence

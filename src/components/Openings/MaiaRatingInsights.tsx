@@ -162,9 +162,8 @@ export const MaiaRatingInsights: React.FC<Props> = ({ ratingPrediction }) => {
           </span>
           We analyze each position before your moves using 9 different Maia
           models (1100-1900). For each model, we calculate the probability it
-          would play your chosen move. The final rating is a weighted average
-          based on these probabilities, with models that better predict your
-          moves having more influence.
+          would play your chosen move. The final rating is the specific level
+          that had the highest log likelihood of predicting your actual moves.
         </p>
       </div>
     </div>

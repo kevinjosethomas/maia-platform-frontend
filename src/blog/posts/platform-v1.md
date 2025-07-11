@@ -76,7 +76,7 @@ Additionally, we have also added new features and made quality-of-life improveme
 
 ## Open Source and Community
 
-The frontend casebase for the Maia Chess platform is entirely open-source. Developers, researchers, and contributors are welcome to view the codebase, suggest improvements, or integrate components into their own work. The full repository is available at:
+The frontend codebase for the Maia Chess platform is entirely open-source. Developers, researchers, and contributors are welcome to view the codebase, suggest improvements, or integrate components into their own work. The full repository is available at:
 
 **GitHub**: [github.com/CSSLab/maia-platform-frontend](https://github.com/CSSLab/maia-platform-frontend)
 

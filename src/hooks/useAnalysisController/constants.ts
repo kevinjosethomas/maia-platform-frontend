@@ -1,5 +1,5 @@
 export const COLORS = {
-  good: ['#238b45', '#41ab5d', '#74c476', '#a1d99b', '#c7e9c0'],
+  good: ['#238b45', '#41ab5d', '#74c476', '#90D289', '#AEDFA4'],
   ok: ['#ec7014', '#feb24c', '#fed976', '#ffeda0', '#ffffcc'].reverse(),
   blunder: ['#cb181d', '#ef3b2c', '#fb6a4a', '#fc9272', '#fcbba1'].reverse(),
 }
