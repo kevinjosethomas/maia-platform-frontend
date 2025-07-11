@@ -21,7 +21,10 @@ export const Header: React.FC = () => {
 
   const startGame = useCallback(
     (playType: PlayType) => {
-      if (document.activeElement instanceof HTMLElement) {
+      if (
+        typeof document !== 'undefined' &&
+        document.activeElement instanceof HTMLElement
+      ) {
         document.activeElement.blur()
       }
       setPlaySetupModalProps({ playType: playType })
@@ -78,11 +81,9 @@ export const Header: React.FC = () => {
   const desktopLayout = (
     <div className="flex w-[90%] flex-row items-center justify-between">
       <div className="flex flex-row items-center justify-start gap-6">
-        <Link href="/" passHref>
-          <div className="flex flex-row items-center gap-2">
-            <Image src="/maia.png" width={40} height={40} alt="Maia Logo" />
-            <h2 className="text-2xl font-bold">Maia Chess</h2>
-          </div>
+        <Link href="/" className="flex flex-row items-center gap-2">
+          <Image src="/maia.png" width={40} height={40} alt="Maia Logo" />
+          <h2 className="text-2xl font-bold">Maia Chess</h2>
         </Link>
         <div className="hidden flex-row gap-1 *:px-2 *:py-1 md:flex">
           {user?.lichessId ? (

@@ -68,14 +68,15 @@ const PlayMaia: React.FC<Props> = ({
 }
 
 const PlayMaiaPage: NextPage = () => {
-  const { startTour } = useTour()
+  const { startTour, tourState } = useTour()
   const [initialTourCheck, setInitialTourCheck] = useState(false)
 
   useEffect(() => {
-    if (!initialTourCheck) {
+    if (!initialTourCheck && tourState.ready) {
+      setInitialTourCheck(true)
       startTour(tourConfigs.play.id, tourConfigs.play.steps, false)
     }
-  }, [initialTourCheck, startTour])
+  }, [initialTourCheck, startTour, tourState.ready])
 
   const router = useRouter()
 

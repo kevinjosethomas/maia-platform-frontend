@@ -41,16 +41,14 @@ export class ErrorBoundary extends Component<Props, State> {
             <p>
               You do not have permission to view this content. Please log in.
             </p>
-            <Link href="/">
-              <div
-                role="button"
-                tabIndex={0}
-                className="flex items-center justify-center rounded bg-human-3 px-8 py-2 transition duration-200 hover:bg-human-4"
-                onClick={() => this.setState({ hasError: false })}
-                onKeyDown={() => this.setState({ hasError: false })}
-              >
-                <p className="text-lg text-primary">Click here to go home</p>
-              </div>
+            <Link
+              href="/"
+              className="flex items-center justify-center rounded bg-human-3 px-8 py-2 transition duration-200 hover:bg-human-4"
+              onClick={() => this.setState({ hasError: false })}
+            >
+              <span className="text-lg text-primary">
+                Click here to go home
+              </span>
             </Link>
           </div>
         )
@@ -71,16 +69,14 @@ export class ErrorBoundary extends Component<Props, State> {
             <h2 className="text-3xl font-bold">
               Sorry, you encountered an Error
             </h2>
-            <Link href="/">
-              <div
-                role="button"
-                tabIndex={0}
-                className="flex items-center justify-center rounded bg-human-3 px-8 py-2 transition duration-200 hover:bg-human-4"
-                onClick={() => this.setState({ hasError: false })}
-                onKeyDown={() => this.setState({ hasError: false })}
-              >
-                <p className="text-lg text-primary">Click here to go home</p>
-              </div>
+            <Link
+              href="/"
+              className="flex items-center justify-center rounded bg-human-3 px-8 py-2 transition duration-200 hover:bg-human-4"
+              onClick={() => this.setState({ hasError: false })}
+            >
+              <span className="text-lg text-primary">
+                Click here to go home
+              </span>
             </Link>
           </div>
           <div className="mt-4 flex flex-col justify-center">

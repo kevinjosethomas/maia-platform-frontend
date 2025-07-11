@@ -23,7 +23,6 @@ import 'node_modules/chessground/assets/chessground.base.css'
 import 'node_modules/chessground/assets/chessground.brown.css'
 import 'node_modules/chessground/assets/chessground.cburnett.css'
 import { Footer, Compose, ErrorBoundary, Header } from 'src/components'
-import { TourManager } from 'src/components/Tour'
 
 const OpenSans = Open_Sans({ subsets: ['latin'] })
 
@@ -44,7 +43,6 @@ function MaiaPlatform({ Component, pageProps }: AppProps) {
   return (
     <PostHogProvider client={posthog}>
       <TourContextProvider>
-        <TourManager />
         <Compose
           components={[
             ErrorBoundary,

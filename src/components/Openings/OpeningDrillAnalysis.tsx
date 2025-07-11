@@ -244,7 +244,7 @@ export const OpeningDrillAnalysis: React.FC<Props> = ({
       {/* Smaller screens (below xl): 3-row stacked layout */}
       <div className="flex h-full flex-col gap-2 xl:hidden">
         {/* Row 1: Combined Highlight + BlunderMeter container */}
-        <div className="relative flex h-[calc(((85vh)-3.25rem)*0.3)] overflow-hidden rounded border-[0.5px] border-white/40 bg-background-1">
+        <div className="relative flex h-[calc(((85vh)-3.25rem)*0.4)] overflow-hidden rounded border-[0.5px] border-white/40 bg-background-1">
           <div className="flex h-full w-full border-r-[0.5px] border-white/40">
             <div className="relative w-full">
               <Highlight
@@ -321,7 +321,7 @@ export const OpeningDrillAnalysis: React.FC<Props> = ({
         </div>
 
         {/* Row 2: MoveMap */}
-        <div className="relative flex h-[calc(((85vh)-3.25rem)*0.35)] w-full">
+        <div className="relative flex h-[calc(((85vh)-3.25rem)*0.3)] w-full">
           <div className="h-full w-full">
             <MoveMap
               moveMap={analysisEnabled ? analysisController.moveMap : undefined}
@@ -350,7 +350,7 @@ export const OpeningDrillAnalysis: React.FC<Props> = ({
         </div>
 
         {/* Row 3: MovesByRating */}
-        <div className="relative flex h-[calc(((85vh)-3.25rem)*0.35)] w-full rounded bg-background-1/60">
+        <div className="relative flex h-[calc(((85vh)-3.25rem)*0.3)] w-full rounded bg-background-1/60">
           <div className="h-full w-full">
             <MovesByRating
               moves={

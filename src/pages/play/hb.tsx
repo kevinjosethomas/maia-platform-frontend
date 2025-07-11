@@ -47,16 +47,16 @@ const PlayHandBrain: React.FC<Props> = ({
 }
 
 const PlayHandBrainPage: NextPage = () => {
-  const { startTour } = useTour()
+  const { startTour, tourState } = useTour()
   const [initialTourCheck, setInitialTourCheck] = useState(false)
 
   useEffect(() => {
-    if (!initialTourCheck) {
+    if (!initialTourCheck && tourState.ready) {
       setInitialTourCheck(true)
       // Always attempt to start the tour - the tour context will handle completion checking
       startTour(tourConfigs.handBrain.id, tourConfigs.handBrain.steps, false)
     }
-  }, [initialTourCheck, startTour])
+  }, [initialTourCheck, startTour, tourState.ready])
 
   const router = useRouter()
 

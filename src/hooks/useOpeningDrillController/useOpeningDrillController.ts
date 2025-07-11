@@ -661,7 +661,6 @@ export const useOpeningDrillController = (
         const moveObj = chess.move(moveUci, { sloppy: true })
 
         if (!moveObj) {
-          console.log('Invalid move:', moveUci)
           return
         }
 

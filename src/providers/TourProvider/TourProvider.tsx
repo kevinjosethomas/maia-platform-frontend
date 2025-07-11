@@ -1,16 +1,10 @@
 import { ReactNode } from 'react'
-
-import { TourProvider as TourContextProvider } from 'src/contexts'
-import { TourOverlay } from 'src/components/Tour'
+import { TourProvider as TourContextProvider } from 'src/contexts/TourContext/TourContext'
 
 export const TourProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }: {
   children: ReactNode
 }) => {
-  return (
-    <TourContextProvider>
-      <TourOverlay>{children}</TourOverlay>
-    </TourContextProvider>
-  )
+  return <TourContextProvider>{children}</TourContextProvider>
 }

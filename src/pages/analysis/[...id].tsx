@@ -69,7 +69,7 @@ const MAIA_MODELS = [
 ]
 
 const AnalysisPage: NextPage = () => {
-  const { startTour } = useTour()
+  const { startTour, tourState } = useTour()
 
   const router = useRouter()
   const { id } = router.query
@@ -80,12 +80,13 @@ const AnalysisPage: NextPage = () => {
   const [initialTourCheck, setInitialTourCheck] = useState(false)
 
   useEffect(() => {
-    if (!initialTourCheck) {
+    // Wait for tour system to be ready before starting tour
+    if (!initialTourCheck && tourState.ready) {
       setInitialTourCheck(true)
       // Always attempt to start the tour - the tour context will handle completion checking
       startTour(tourConfigs.analysis.id, tourConfigs.analysis.steps, false)
     }
-  }, [initialTourCheck, startTour])
+  }, [initialTourCheck, startTour, tourState.ready])
   const [currentId, setCurrentId] = useState<string[]>(id as string[])
 
   const getAndSetTournamentGame = useCallback(
@@ -748,7 +749,7 @@ const Analysis: React.FC<Props> = ({
           {/* Smaller screens (below xl): 3-row stacked layout */}
           <div className="flex h-full flex-col gap-2 xl:hidden">
             {/* Row 1: Combined Highlight + BlunderMeter container */}
-            <div className="flex h-[calc((85vh)*0.3)] overflow-hidden rounded border-[0.5px] border-white/40 bg-background-1">
+            <div className="flex h-[calc((85vh)*0.4)] overflow-hidden rounded border-[0.5px] border-white/40 bg-background-1">
               <div className="flex h-full w-full border-r-[0.5px] border-white/40">
                 <Highlight
                   hover={hover}
@@ -781,7 +782,7 @@ const Analysis: React.FC<Props> = ({
             </div>
 
             {/* Row 2: MoveMap */}
-            <div className="flex h-[calc((85vh)*0.35)] w-full">
+            <div className="flex h-[calc((85vh)*0.3)] w-full">
               <div className="h-full w-full">
                 <MoveMap
                   moveMap={controller.moveMap}
@@ -793,7 +794,7 @@ const Analysis: React.FC<Props> = ({
             </div>
 
             {/* Row 3: MovesByRating */}
-            <div className="flex h-[calc((85vh)*0.35)] w-full rounded bg-background-1/60">
+            <div className="flex h-[calc((85vh)*0.3)] w-full rounded bg-background-1/60">
               <div className="h-full w-full">
                 <MovesByRating
                   moves={controller.movesByRating}

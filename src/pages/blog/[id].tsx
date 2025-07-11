@@ -19,7 +19,7 @@ const BlogPost = ({ post }: BlogPostProps) => {
   }
 
   return (
-    <div className="flex h-full max-w-[80ch] flex-col items-center justify-center gap-5 py-[10%] md:py-[2%]">
+    <div className="flex h-full flex-col items-center justify-center gap-5 py-[10%] md:py-[2%]">
       <Head>
         <title>{post.title} – Maia Chess</title>
         <meta name="description" content={post.excerpt} />
@@ -59,7 +59,7 @@ const BlogPost = ({ post }: BlogPostProps) => {
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href={`https://maiachess.com/blog/${post.id}`} />
       </Head>
-      <div className="flex max-w-[90%] flex-col items-center justify-center overflow-x-hidden">
+      <div className="flex max-w-[90%] flex-col items-center justify-center overflow-x-hidden md:max-w-[80ch]">
         <div className="mb-8 flex w-full flex-col gap-2">
           <Link href="/blog">
             <p className="hover:opacity-75">← Go back</p>
@@ -109,7 +109,7 @@ const BlogPost = ({ post }: BlogPostProps) => {
             ))}
           </div>
         </div>
-        <div className="prose prose-sm prose-invert w-full max-w-none leading-relaxed md:prose-lg lg:prose-xl prose-headings:mb-2 prose-a:text-human-2 hover:prose-a:underline prose-ul:list-inside prose-ul:list-disc prose-li:text-sm prose-hr:my-8 prose-hr:opacity-20 lg:max-w-[80ch]">
+        <div className="prose prose-sm prose-invert w-full max-w-none leading-relaxed md:prose-lg lg:prose-xl prose-headings:mb-2 prose-a:text-human-2 hover:prose-a:underline prose-ul:list-inside prose-ul:list-disc prose-li:text-sm prose-img:mb-2 prose-hr:my-8 prose-hr:opacity-20 lg:max-w-[80ch]">
           <Markdown>{post.content}</Markdown>
         </div>
       </div>

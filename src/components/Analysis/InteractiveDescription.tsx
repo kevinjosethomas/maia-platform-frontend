@@ -71,7 +71,7 @@ export const InteractiveDescription: React.FC<Props> = ({
 
   return (
     <div className="w-full">
-      <p className="w-full whitespace-normal break-words text-[10px] leading-tight text-secondary xl:text-xs xl:leading-tight">
+      <p className="w-full whitespace-normal break-words text-[11px] leading-tight text-secondary xl:leading-tight">
         {renderSegments()}
       </p>
 

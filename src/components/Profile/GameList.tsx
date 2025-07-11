@@ -298,13 +298,6 @@ export const GameList = () => {
                 </div>
                 <div className="flex flex-1 items-center justify-between overflow-hidden py-1">
                   <div className="flex items-center gap-2 overflow-hidden">
-                    {selected === 'hb' && (
-                      <span className="material-symbols-outlined text-sm text-secondary">
-                        {hbSubsection === 'hand'
-                          ? 'hand_gesture'
-                          : 'psychology'}
-                      </span>
-                    )}
                     <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-primary">
                       {game.label}
                     </p>

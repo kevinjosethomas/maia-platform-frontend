@@ -59,30 +59,6 @@ h5 {
 }
 
 :root {
-  --color-backdrop: 246 246 246;
-  --color-text-primary: 30 30 30;
-  --color-text-secondary: 97 97 101;
-  --color-button-primary: 168 168 198;
-  --color-button-secondary: 168 168 198;
-
-  --color-background1: 242 242 247;
-  --color-background2: 209 209 214;
-  --color-background3: 199 199 204;
-  --color-background4: 174 174 178;
-  --color-background5: 142 142 147;
-
-  --color-human-accent1: 254 127 109;
-  --color-human-accent2: 222 111 95;
-  --color-human-accent3: 191 95 82;
-  --color-human-accent4: 159 79 68;
-
-  --color-engine-accent1: 171 204 248;
-  --color-engine-accent2: 150 191 246;
-  --color-engine-accent3: 129 179 244;
-  --color-engine-accent4: 87 153 241;
-}
-
-.theme-dark {
   --color-backdrop: 27 26 30;
   --color-text-primary: 235 235 235;
   --color-text-secondary: 165 169 174;

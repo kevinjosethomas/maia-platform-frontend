@@ -25,18 +25,18 @@ import { useTuringController } from 'src/hooks/useTuringController/useTuringCont
 import { tourConfigs } from 'src/config/tours'
 
 const TuringPage: NextPage = () => {
-  const { startTour } = useTour()
+  const { startTour, tourState } = useTour()
   const [initialTourCheck, setInitialTourCheck] = useState(false)
 
   const controller = useTuringController()
 
   useEffect(() => {
-    if (!initialTourCheck) {
+    if (!initialTourCheck && tourState.ready) {
       setInitialTourCheck(true)
       // Always attempt to start the tour - the tour context will handle completion checking
       startTour(tourConfigs.turing.id, tourConfigs.turing.steps, false)
     }
-  }, [initialTourCheck, startTour])
+  }, [initialTourCheck, startTour, tourState.ready])
 
   return (
     <TuringControllerContext.Provider value={controller}>
