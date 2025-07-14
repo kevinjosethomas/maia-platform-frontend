@@ -1,5 +1,8 @@
 import { Player } from '..'
+import { GameTree } from './tree'
 import { Termination } from '../analysis'
+
+export * from './tree'
 
 export type Check = false | 'white' | 'black'
 
@@ -16,6 +19,7 @@ export interface Move {
 export interface BaseGame {
   id: string
   moves: Move[]
+  tree: GameTree
 }
 
 export interface Game extends BaseGame {

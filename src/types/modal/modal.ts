@@ -5,3 +5,10 @@ export type Modals = {
   train: boolean
   turing: boolean
 }
+
+export type InstructionsType =
+  | 'againstMaia'
+  | 'handAndBrain'
+  | 'analysis'
+  | 'train'
+  | 'turing'

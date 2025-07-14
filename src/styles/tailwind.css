@@ -7,31 +7,66 @@ pre {
   margin: 0;
 }
 
-:root {
-  --color-backdrop: 246 246 246;
-  --color-text-primary: 30 30 30;
-  --color-text-secondary: 97 97 101;
-  --color-button-primary: 168 168 198;
-  --color-button-secondary: 168 168 198;
-
-  --color-background1: 242 242 247;
-  --color-background2: 209 209 214;
-  --color-background3: 199 199 204;
-  --color-background4: 174 174 178;
-  --color-background5: 142 142 147;
-
-  --color-human-accent1: 254 127 109;
-  --color-human-accent2: 222 111 95;
-  --color-human-accent3: 191 95 82;
-  --color-human-accent4: 159 79 68;
-
-  --color-engine-accent1: 171 204 248;
-  --color-engine-accent2: 150 191 246;
-  --color-engine-accent3: 129 179 244;
-  --color-engine-accent4: 87 153 241;
+html,
+body {
+  padding: 0;
+  margin: 0;
 }
 
-.theme-dark {
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  padding: 0;
+  margin: 0;
+}
+
+.material-symbols-filled {
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 200,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  background-color: rgb(var(--color-backdrop));
+  color: rgb(var(--color-text-primary));
+}
+
+@media (max-width: 1000px) {
+  .app-container {
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+}
+
+.content-container {
+  flex-grow: 1;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+:root {
   --color-backdrop: 27 26 30;
   --color-text-primary: 235 235 235;
   --color-text-secondary: 165 169 174;
@@ -59,14 +94,6 @@ svg {
   fill: rgb(var(--color-text-primary));
 }
 
-.font-helvetica {
-  font-family:
-    Helvetica Neue,
-    Helvetica,
-    Arial,
-    sans-serif;
-}
-
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -77,12 +104,12 @@ svg {
 }
 
 .red-scrollbar::-webkit-scrollbar {
-  width: 7px;
+  width: 5px;
 }
 
 .red-scrollbar::-webkit-scrollbar-thumb {
   background-color: rgb(var(--color-human-accent3));
-  border-radius: 3px;
+  border-radius: 1px;
 }
 
 .red-scrollbar::-webkit-scrollbar-thumb:hover {
@@ -93,8 +120,8 @@ svg {
   border: 4px solid rgb(var(--color-background4));
   border-left-color: rgb(var(--color-human-accent1));
   border-radius: 50%;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   animation: spin 1s linear infinite;
 }
 
@@ -102,4 +129,53 @@ svg {
   to {
     transform: rotate(360deg);
   }
+}
+
+.tree-ul {
+  position: relative;
+  margin-left: 0.5rem;
+  padding-left: 0.1rem;
+}
+
+.tree-li {
+  position: relative;
+  padding-left: 0.5rem;
+}
+
+/* Vertical Lines */
+.tree-li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: #be6559;
+}
+
+/* Horizontal Lines */
+.tree-li::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.9rem;
+  width: 0.4rem;
+  border-top: 1px solid #be6559;
+}
+
+/* Vertical Lines */
+.tree-li::backdrop {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.9rem;
+  width: 2rem;
+  height: 2rem;
+  background-color: #be6559;
+}
+
+.root > li:last-child::before,
+.tree-ul > li:last-child::before {
+  bottom: auto;
+  height: 0.9rem;
 }

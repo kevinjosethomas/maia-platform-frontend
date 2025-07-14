@@ -1,9 +1,0 @@
-@import '/src/styles/base';
-
-.container {
-  @include mobile {
-    h2 {
-      font-size: 1.3em;
-    }
-  }
-}

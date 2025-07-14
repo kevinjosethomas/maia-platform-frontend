@@ -1,40 +1,48 @@
 import Head from 'next/head'
 import { NextPage } from 'next/types'
-import { useCallback, useContext, useEffect } from 'react'
-
+import { useCallback, useContext, useEffect, useState } from 'react'
+import { trackTuringGameStarted } from 'src/lib/analytics'
 import {
-  ThemeContext,
-  ModalContext,
   WindowSizeContext,
-  GameControllerContext,
   TuringControllerContext,
+  useTour,
 } from 'src/contexts'
 import {
   Loading,
+  GameInfo,
   GameBoard,
-  TuringGames,
+  TuringLog,
+  StatsDisplay,
   MovesContainer,
   BoardController,
   TuringSubmission,
+  ContinueAgainstMaia,
 } from 'src/components'
 import { AllStats } from 'src/hooks/useStats'
 import { TuringGame } from 'src/types/turing'
-import { StatsDisplay } from 'src/components/StatsDisplay'
-import { useGameController, useTuringController } from 'src/hooks'
-import { GameInfo, ContinueAgainstMaia } from 'src/components/Core'
+import { useTuringController } from 'src/hooks/useTuringController/useTuringController'
+import { tourConfigs } from 'src/constants/tours'
 
 const TuringPage: NextPage = () => {
-  const { openedModals, setInstructionsModalProps: setInstructionsModalProps } =
-    useContext(ModalContext)
-
-  useEffect(() => {
-    if (!openedModals.turing) {
-      setInstructionsModalProps({ instructionsType: 'turing' })
-    }
-    return () => setInstructionsModalProps(undefined)
-  }, [setInstructionsModalProps, openedModals.turing])
+  const { startTour, tourState } = useTour()
+  const [initialTourCheck, setInitialTourCheck] = useState(false)
 
   const controller = useTuringController()
+
+  useEffect(() => {
+    if (!initialTourCheck && tourState.ready) {
+      setInitialTourCheck(true)
+      // Always attempt to start the tour - the tour context will handle completion checking
+      startTour(tourConfigs.turing.id, tourConfigs.turing.steps, false)
+    }
+  }, [initialTourCheck, startTour, tourState.ready])
+
+  // Track when a Turing game is loaded
+  useEffect(() => {
+    if (controller.game && controller.stats?.rating) {
+      trackTuringGameStarted(controller.game.id, controller.stats.rating)
+    }
+  }, [controller.game, controller.stats?.rating])
 
   return (
     <TuringControllerContext.Provider value={controller}>
@@ -54,42 +62,43 @@ interface Props {
 
 const Turing: React.FC<Props> = (props: Props) => {
   const { game, stats } = props
-  const { theme } = useContext(ThemeContext)
+
   const { isMobile } = useContext(WindowSizeContext)
 
-  const controller = useGameController(game)
+  const controller = useContext(TuringControllerContext)
 
   const launchContinue = useCallback(() => {
-    const fen = game.moves[controller.currentIndex].board
+    const fen = controller.currentNode?.fen
 
-    const url = '/play' + '?fen=' + encodeURIComponent(fen)
-
-    window.open(url)
-  }, [game, controller])
+    if (fen) {
+      const url = '/play' + '?fen=' + encodeURIComponent(fen)
+      window.open(url)
+    }
+  }, [controller])
 
   const Info = (
     <>
       <div className="flex w-full items-center justify-between text-secondary">
-        <p>{theme == 'dark' ? '●' : '○'} Unknown</p>
+        <p>● Unknown</p>
         <p>
           {game.termination.winner === 'white' ? (
             <span className="text-engine-3">1</span>
           ) : game.termination.winner === 'black' ? (
             <span className="text-human-3">0</span>
           ) : (
-            <span>1/2</span>
+            <span className="text-secondary">½</span>
           )}
         </p>
       </div>
       <div className="flex w-full items-center justify-between text-secondary">
-        <p>{theme == 'light' ? '●' : '○'} Unknown</p>
+        <p>○ Unknown</p>
         <p>
           {game.termination.winner === 'black' ? (
             <span className="text-engine-3">1</span>
           ) : game.termination.winner === 'white' ? (
             <span className="text-human-3">0</span>
           ) : (
-            <span>1/2</span>
+            <span className="text-secondary">½</span>
           )}
         </p>
       </div>{' '}
@@ -105,42 +114,53 @@ const Turing: React.FC<Props> = (props: Props) => {
 
   const desktopLayout = (
     <>
-      <div className="flex h-full flex-1 flex-col justify-center gap-1">
-        <div className="mt-2 flex w-full flex-row items-center justify-center gap-1">
-          <div
-            style={{
-              maxWidth: 'min(20vw, 100vw - 75vh)',
-            }}
-            className="flex h-[75vh] w-[40vh] flex-col justify-between"
-          >
+      <div className="flex h-full flex-1 flex-col justify-center gap-1 py-10">
+        <div className="mx-auto mt-2 flex w-[90%] flex-row items-center justify-between gap-4">
+          <div className="flex h-[75vh] min-w-64 flex-grow flex-col justify-between">
             <div className="flex w-full flex-col gap-2">
               <GameInfo title="Bot or Not" icon="smart_toy" type="turing">
                 {Info}
               </GameInfo>
-              <ContinueAgainstMaia launchContinue={launchContinue} />
-              <div className="flex flex-row flex-wrap items-start justify-start gap-1 overflow-y-auto">
-                <TuringGames />
+              <ContinueAgainstMaia
+                launchContinue={launchContinue}
+                sourcePage="openings"
+                currentFen={controller.currentNode?.fen || ''}
+              />
+              <div className="relative bottom-0 flex h-full min-h-[38px] flex-1 flex-col justify-end overflow-auto">
+                <TuringLog />
               </div>
             </div>
             <StatsDisplay stats={stats} />
           </div>
-          <div className="relative flex aspect-square w-full max-w-[75vh]">
-            <GameBoard game={game} />
-          </div>
           <div
-            style={{
-              maxWidth: 'min(20vw, 100vw - 75vh)',
-            }}
-            className="flex h-[75vh] w-[40vh] flex-col gap-1"
+            id="turing-page"
+            className="relative flex aspect-square w-full max-w-[75vh] flex-shrink-0"
           >
+            <GameBoard game={game} currentNode={controller.currentNode} />
+          </div>
+          <div className="flex h-[75vh] min-w-64 flex-grow flex-col gap-1">
             <div className="relative bottom-0 h-full min-h-[38px] flex-1">
-              <MovesContainer game={game} termination={game.termination} />
+              <MovesContainer
+                game={game}
+                termination={game.termination}
+                type="turing"
+              />
             </div>
-            <div>
-              <TuringSubmission />
+            <div id="turing-submission">
+              <TuringSubmission rating={stats.rating ?? 0} />
             </div>
             <div className="flex-none">
-              <BoardController />
+              <BoardController
+                orientation={controller.orientation}
+                setOrientation={controller.setOrientation}
+                currentNode={controller.currentNode}
+                plyCount={controller.plyCount}
+                goToNode={controller.goToNode}
+                goToNextNode={controller.goToNextNode}
+                goToPreviousNode={controller.goToPreviousNode}
+                goToRootNode={controller.goToRootNode}
+                gameTree={controller.gameTree}
+              />
             </div>
           </div>
         </div>
@@ -150,7 +170,10 @@ const Turing: React.FC<Props> = (props: Props) => {
 
   const mobileLayout = (
     <>
-      <div className="flex h-full flex-1 flex-col justify-center gap-1">
+      <div
+        id="turing-page"
+        className="flex h-full flex-1 flex-col justify-center gap-1"
+      >
         <div className="mt-2 flex h-full flex-col items-start justify-start gap-2">
           <div className="flex h-auto w-full flex-col gap-2">
             <div className="w-screen">
@@ -160,25 +183,43 @@ const Turing: React.FC<Props> = (props: Props) => {
             </div>
           </div>
           <div className="relative flex aspect-square h-[100vw] w-screen">
-            <GameBoard game={game} />
+            <GameBoard game={game} currentNode={controller.currentNode} />
           </div>
           <div className="flex h-auto w-full flex-col gap-1">
             <div className="relative bottom-0 h-full flex-1 overflow-auto">
-              <MovesContainer game={game} termination={game.termination} />
+              <MovesContainer
+                game={game}
+                termination={game.termination}
+                type="turing"
+              />
             </div>
             <div className="flex-none">
-              <BoardController />
+              <BoardController
+                orientation={controller.orientation}
+                setOrientation={controller.setOrientation}
+                currentNode={controller.currentNode}
+                plyCount={controller.plyCount}
+                goToNode={controller.goToNode}
+                goToNextNode={controller.goToNextNode}
+                goToPreviousNode={controller.goToPreviousNode}
+                goToRootNode={controller.goToRootNode}
+                gameTree={controller.gameTree}
+              />
             </div>
-            <div className="w-screen">
-              <TuringSubmission />
+            <div id="turing-submission" className="w-screen">
+              <TuringSubmission rating={stats.rating ?? 0} />
             </div>
             <div className="flex w-full">
-              <ContinueAgainstMaia launchContinue={launchContinue} />
+              <ContinueAgainstMaia
+                launchContinue={launchContinue}
+                sourcePage="openings"
+                currentFen={controller.currentNode?.fen || ''}
+              />
             </div>
           </div>
         </div>
-        <div className="flex flex-row flex-wrap items-start justify-start gap-1 overflow-y-auto">
-          <TuringGames />
+        <div className="relative bottom-0 flex h-full min-h-[38px] flex-1 flex-col justify-end overflow-auto">
+          <TuringLog />
         </div>
         <StatsDisplay stats={stats} />
       </div>
@@ -191,9 +232,9 @@ const Turing: React.FC<Props> = (props: Props) => {
         <title>Maia Chess - Bot or Not</title>
         <meta name="description" content="Turing survey" />
       </Head>
-      <GameControllerContext.Provider value={{ ...controller }}>
+      <TuringControllerContext.Provider value={controller}>
         {isMobile ? mobileLayout : desktopLayout}
-      </GameControllerContext.Provider>
+      </TuringControllerContext.Provider>
     </>
   )
 }

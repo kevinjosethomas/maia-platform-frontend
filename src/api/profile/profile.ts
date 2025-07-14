@@ -1,7 +1,10 @@
 import { buildUrl } from '../utils'
+import { PlayerStats } from 'src/types'
 
-export const getPlayerStats = async () => {
-  const res = await fetch(buildUrl('auth/get_player_stats'))
+export const getPlayerStats = async (name?: string): Promise<PlayerStats> => {
+  const res = await fetch(
+    buildUrl(`auth/get_player_stats${name ? `/${name}` : ''}`),
+  )
   const data = await res.json()
   return {
     regularRating: data.play_elo as number,

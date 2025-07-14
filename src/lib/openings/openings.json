@@ -1,0 +1,636 @@
+[
+  {
+    "id": "english-opening",
+    "name": "English Opening",
+    "description": "The English Opening is a flexible flank opening aimed at controlling the center indirectly with c4, allowing white to dictate the pace and structure of the game.",
+    "pgn": "1. c4",
+    "fen": "rnbqkbnr/pppppppp/8/8/2P5/8/PP1PPPPP/RNBQKBNR b KQkq - 0 1",
+    "variations": [
+      {
+        "id": "english-opening-kings-english-variation",
+        "name": "King's English Variation",
+        "pgn": "1. c4 e5",
+        "fen": "rnbqkbnr/pppp1ppp/8/4p3/2P5/8/PP1PPPPP/RNBQKBNR w KQkq - 0 2"
+      },
+      {
+        "id": "english-opening-symmetrical-variation",
+        "name": "Symmetrical Variation",
+        "pgn": "1. c4 c5",
+        "fen": "rnbqkbnr/pp1ppppp/8/2p5/2P5/8/PP1PPPPP/RNBQKBNR w KQkq - 0 2"
+      },
+      {
+        "id": "english-symmetricalknights",
+        "name": "Symmetrical Four Knights'",
+        "pgn": "1. c4 c5 2. Nf3 Nf6 3. Nc3 Nc6 ",
+        "fen": "r1bqkb1r/pp1ppppp/2n2n2/2p5/2P5/2N2N2/PP1PPPPP/R1BQKB1R w KQkq - 4 4"
+      },
+      {
+        "id": "english-ultrasymmetrical",
+        "name": "Ultra-Symmetrical Line",
+        "pgn": "1. c4 c5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7",
+        "fen": "r1bqk1nr/pp1pppbp/2n3p1/2p5/2P5/2N3P1/PP1PPPBP/R1BQK1NR w KQkq - 2 5"
+      },
+      {
+        "id": "english-hedgehog",
+        "name": "Hedgehog Defense",
+        "pgn": "1. c4 c5 2. Nf3 Nf6 3. Nc3 e6 4. g3 b6 5. Bg2 Bb7 6. O-O Be7",
+        "fen": "rn1qk2r/pb1pbppp/1p2pn2/2p5/2P5/2N2NP1/PP1PPPBP/R1BQ1RK1 w kq - 4 7"
+      },
+      {
+        "id": "english-reversedsicilian",
+        "name": "Reversed Sicilian",
+        "pgn": "1. c4 e5",
+        "fen": "rnbqkbnr/pppp1ppp/8/4p3/2P5/8/PP1PPPPP/RNBQKBNR w KQkq e6 0 2"
+      },
+      {
+        "id": "english-fourknights",
+        "name": "Four Knights' Variation",
+        "pgn": "1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6",
+        "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2P5/2N2N2/PP1PPPPP/R1BQKB1R w KQkq - 4 4"
+      },
+      {
+        "id": "english-bremen",
+        "name": "Bremen System",
+        "pgn": "1. c4 e5 2. Nc3 Nf6 3. g3",
+        "fen": "rnbqkb1r/pppp1ppp/5n2/4p3/2P5/2N3P1/PP1PPP1P/R1BQKBNR b KQkq - 0 3"
+      },
+      {
+        "id": "english-botvinnik",
+        "name": "Botvinnik System",
+        "pgn": "1. c4 Nf6 2. Nc3 g6 3. e4 Bg7 4. g3 O-O 5. Bg2 c5 6. Nge2 Nc6 7. d3 d6 8. O-O",
+        "fen": "r1bq1rk1/pp2ppbp/2np1np1/2p5/2P1P3/2NP2P1/PP2NPBP/R1BQ1RK1 b - - 1 8"
+      },
+      {
+        "id": "english-closed",
+        "name": "Closed Variation",
+        "pgn": "1. c4 e5 2. Nc3 Nc6",
+        "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/2P5/2N5/PP1PPPPP/R1BQKBNR w KQkq - 2 3"
+      }
+    ]
+  },
+  {
+    "id": "nimzo-larsen-attack",
+    "name": "Nimzo-Larsen Attack",
+    "description": "The Nimzo-Larsen Attack is an offbeat opening with b3, targeting dark-square control and early bishop activity, ideal for players seeking unbalanced positions.",
+    "pgn": "1. b3",
+    "fen": "rnbqkbnr/pppppppp/8/8/8/1P6/P1PPPPPP/RNBQKBNR b KQkq - 0 1",
+    "variations": []
+  },
+  {
+    "id": "bird-opening",
+    "name": "Bird Opening",
+    "description": "The Bird Opening is a flank opening with f4, aiming for a strong pawn presence in the center and attacking chances, though it can leave the king vulnerable early on.",
+    "pgn": "1. f4",
+    "fen": "rnbqkbnr/pppppppp/8/8/5P2/8/PPPPP1PP/RNBQKBNR b KQkq - 0 1",
+    "variations": []
+  },
+  {
+    "id": "french-defense",
+    "name": "French Defense",
+    "description": "The French Defense is a resilient counter-attacking defense for black with e6, prioritizing a solid pawn structure and strategic counterplay against white's center.",
+    "pgn": "1. e4 e6",
+    "fen": "rnbqkbnr/pppp1ppp/4p3/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+    "variations": [
+      {
+        "id": "french-defense-tarrasch-variation",
+        "name": "Tarrasch Variation",
+        "pgn": "1. e4 e6 2. d4 d5 3. Nd2",
+        "fen": "rnbqkbnr/ppp2ppp/4p3/3p4/3PP3/8/PPPN1PPP/R1BQKBNR b KQkq - 1 3"
+      },
+      {
+        "id": "french-classical",
+        "name": "Classical Variation",
+        "pgn": "1. e4 e6 2. d4 d5 3. Nc3 Nf6 4. Bg5",
+        "fen": "rnbqkb1r/ppp2ppp/4pn2/3p2B1/3PP3/2N5/PPP2PPP/R2QKBNR b KQkq - 3 4"
+      },
+      {
+        "id": "french-defense-exchange-variation",
+        "name": "Exchange Variation",
+        "pgn": "1. e4 e6 2. d4 d5 3. exd5",
+        "fen": "rnbqkbnr/ppp2ppp/4p3/3P4/3P4/8/PPP2PPP/RNBQKBNR b KQkq - 0 3"
+      },
+      {
+        "id": "french-defense-winawer",
+        "name": "Winawer Variation",
+        "pgn": "1. e4 e6 2. d4 d5 3. Nc3 Bb4",
+        "fen": "rnbqk1nr/ppp2ppp/4p3/3p4/1b1PP3/2N5/PPP2PPP/R1BQKBNR w KQkq - 2 4"
+      },
+      {
+        "id": "french-advance",
+        "name": "Advance Variation",
+        "pgn": "1. e4 e6 2. d4 d5 3. e5",
+        "fen": "rnbqkbnr/ppp2ppp/4p3/3pP3/3P4/8/PPP2PPP/RNBQKBNR b KQkq - 0 3"
+      }
+    ]
+  },
+  {
+    "id": "sicilian-defense",
+    "name": "Sicilian Defense",
+    "description": "The Sicilian Defense is a sharp and asymmetrical reply to e4, offering dynamic counterplay for black and leading to rich, tactical middle-game positions.",
+    "pgn": "1. e4 c5",
+    "fen": "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+    "variations": [
+      {
+        "id": "sicilian-open",
+        "name": "Open Variation",
+        "pgn": "1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4",
+        "fen": "rnbqkbnr/pp2pppp/3p4/8/3NP3/8/PPP2PPP/RNBQKB1R b KQkq - 0 4"
+      },
+      {
+        "id": "sicilian-defense-closed",
+        "name": "Closed Variation",
+        "pgn": "1. e4 c5 2. Nc3",
+        "fen": "rnbqkbnr/pp1ppppp/8/2p5/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq - 1 2"
+      },
+      {
+        "id": "sicilian-defense-old-sicilian",
+        "name": "Old Variation",
+        "pgn": "1. e4 c5 2. Nf3 Nc6",
+        "fen": "r1bqkbnr/pp1ppppp/2n5/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3"
+      },
+      {
+        "id": "sicilian-defense-alapin-variation",
+        "name": "Alapin Variation",
+        "pgn": "1. e4 c5 2. c3",
+        "fen": "rnbqkbnr/pp1ppppp/8/2p5/4P3/2P5/PP1P1PPP/RNBQKBNR b KQkq - 0 2"
+      },
+      {
+        "id": "sicilian-defense-mcdonnell-attack",
+        "name": "McDonnell Attack",
+        "pgn": "1. e4 c5 2. f4",
+        "fen": "rnbqkbnr/pp1ppppp/8/2p5/4PP2/8/PPPP2PP/RNBQKBNR b KQkq - 0 2"
+      },
+      {
+        "id": "sicilian-defense-accelerated-dragon-exchange-variation",
+        "name": "Exchange Variation",
+        "pgn": "1. e4 c5 2. Nf3 Nc6 3. d4 cxd4 4. Nxd4 g6 5. Nxc6",
+        "fen": "r1bqkbnr/pp1ppp1p/2N3p1/8/4P3/8/PPP2PPP/RNBQKB1R b KQkq - 0 5"
+      },
+      {
+        "id": "sicilian-defense-taimanov-variation",
+        "name": "Taimanov Variation",
+        "pgn": "1. e4 c5 2. Nf3 e6 3. d4 cxd4 4. Nxd4 Nc6",
+        "fen": "r1bqkbnr/pp1p1ppp/2n1p3/8/3NP3/8/PPP2PPP/RNBQKB1R w KQkq - 1 5"
+      },
+      {
+        "id": "sicilian-defense-najdorf-variation",
+        "name": "Najdorf Variation",
+        "pgn": "1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6",
+        "fen": "rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6"
+      },
+      {
+        "id": "sicilian-defense-dragon-variation",
+        "name": "Dragon Variation",
+        "pgn": "1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 g6",
+        "fen": "rnbqkb1r/pp2pp1p/3p1np1/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6"
+      }
+    ]
+  },
+  {
+    "id": "modern-defense",
+    "name": "Modern Defense",
+    "description": "The Modern Defense is a hypermodern approach where black delays direct pawn confrontation, focusing instead on flexible pawn structures and fianchettoed bishops.",
+    "pgn": "1.d4 d6 2.c4 g6 3.Nc3 Bg7",
+    "fen": "rnbqk1nr/ppp1ppbp/3p2p1/8/2PP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 2 4",
+    "variations": []
+  },
+  {
+    "id": "caro-kann-defense",
+    "name": "Caro-Kann Defense",
+    "description": "The Caro-Kann Defense is a solid and robust defense with c6 and d5, aiming for a sound pawn structure and good endgame prospects for black.",
+    "pgn": "1. e4 c6",
+    "fen": "rnbqkbnr/pp1ppppp/2p5/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+    "variations": [
+      {
+        "id": "caro-kann-defense-exchange-variation",
+        "name": "Exchange Variation",
+        "pgn": "1. e4 c6 2. d4 d5 3. exd5",
+        "fen": "rnbqkbnr/pp2pppp/2p5/3P4/3P4/8/PPP2PPP/RNBQKBNR b KQkq - 0 3"
+      },
+      {
+        "id": "carokann-panov",
+        "name": "Panov-Botvinnik Attack",
+        "pgn": "1. e4 c6 2. d4 d5 3. exd5 cxd5 4. c4",
+        "fen": "rnbqkbnr/pp3ppp/2p5/3p4/2P1P3/8/PP1P1PPP/RNBQKBNR b KQkq - 0 4"
+      },
+      {
+        "id": "carokann-advance",
+        "name": "Advance Variation",
+        "pgn": "1. e4 c6 2. d4 d5 3. e5",
+        "fen": "rnbqkbnr/pp2pppp/2p5/3pP3/3P4/8/PPP2PPP/RNBQKBNR b KQkq - 0 3"
+      },
+      {
+        "id": "carokann-fantasy",
+        "name": "Fantasy Variation",
+        "pgn": "1. e4 c6 2. d4 d5 3. f3",
+        "fen": "rnbqkbnr/pp2pppp/2p5/3p4/3PP3/5P2/PPP3PP/RNBQKBNR b KQkq - 0 3"
+      },
+      {
+        "id": "sicilian-french",
+        "name": "French Variation",
+        "pgn": "1. e4 c5 2. Nf3 e6",
+        "fen": "rnbqkbnr/pp2pppp/8/2p1p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3"
+      }
+    ]
+  },
+  {
+    "id": "benoni-defense",
+    "name": "Benoni Defense",
+    "description": "The Benoni Defense is a dynamic opening where Black disrupts White's center, aiming for active piece play and tactical opportunities in imbalanced positions.",
+    "pgn": "1. d4 Nf6 2. c4 c5",
+    "fen": "rnbqkb1r/pp1ppppp/5n2/2p5/2PP4/8/PP2PPPP/RNBQKBNR w KQkq c6 0 3",
+    "variations": [
+      {
+        "id": "benoni-defense-old-benoni",
+        "name": "Benoni Defense: Old Benoni",
+        "pgn": "1. d4 c5",
+        "fen": "rnbqkbnr/pp1ppppp/8/2p5/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 2"
+      }
+    ]
+  },
+  {
+    "id": "alekhine-defense",
+    "name": "Alekhine Defense",
+    "description": "The Alekhine Defense is an unorthodox defense provoking white to overextend their pawns early with e4 and d4, aiming to counter-attack later with active piece play.",
+    "pgn": "1. e4 Nf6",
+    "fen": "rnbqkb1r/pppppppp/5n2/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 2",
+    "variations": []
+  },
+  {
+    "id": "dutch-defense",
+    "name": "Dutch Defense",
+    "description": "The Dutch Defense is an ambitious defense with f5, where black seeks to challenge white's center immediately and create kingside attacking chances.",
+    "pgn": "1. d4 f5",
+    "fen": "rnbqkbnr/ppppp1pp/8/5p2/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 2",
+    "variations": []
+  },
+
+  {
+    "id": "bishops-opening",
+    "name": "Bishop's Opening",
+    "description": "The Bishop's Opening is a classical and flexible opening with Bc4, allowing white to aim for rapid development and early kingside activity.",
+    "pgn": "1. e4 e5 2. Bc4",
+    "fen": "rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR b KQkq - 1 2",
+    "variations": []
+  },
+  {
+    "id": "queens-gambit",
+    "name": "Queen's Gambit",
+    "description": "The Queen's Gambit is a classical opening with c4 offering a pawn to challenge black's center, leading to rich strategic and tactical opportunities for white.",
+    "pgn": "1. d4 d5 2. c4",
+    "fen": "rnbqkbnr/ppp1pppp/8/3p4/2PP4/8/PP2PPPP/RNBQKBNR b KQkq - 0 2",
+    "variations": [
+      {
+        "id": "queens-gambit-slav-defense",
+        "name": "Slav Defense",
+        "pgn": "1. d4 d5 2. c4 c6",
+        "fen": "rnbqkbnr/pp2pppp/2p5/3p4/2PP4/8/PP2PPPP/RNBQKBNR w KQkq - 0 3"
+      },
+      {
+        "id": "queens-gambit-semi-slav-defense",
+        "name": "Semi-Slav Defense",
+        "pgn": "1. d4 d5 2. c4 c6 3. Nf3 Nf6 4. Nc3 e6",
+        "fen": "rnbqkb1r/pp3ppp/2p1pn2/3p4/2PP4/2N2N2/PP2PPPP/R1BQKB1R w KQkq - 0 5"
+      },
+      {
+        "id": "queens-gambit-accepted",
+        "name": "Queen's Gambit Accepted",
+        "pgn": "1. d4 d5 2. c4 dxc4",
+        "fen": "rnbqkbnr/ppp1pppp/8/8/2pP4/8/PP2PPPP/RNBQKBNR w KQkq - 0 3"
+      },
+      {
+        "id": "queens-gambit-declined",
+        "name": "Queen's Gambit Declined",
+        "pgn": "1. d4 d5 2. c4 e6",
+        "fen": "rnbqkbnr/ppp2ppp/4p3/3p4/2PP4/8/PP2PPPP/RNBQKBNR w KQkq - 0 3"
+      }
+    ]
+  },
+  {
+    "id": "kings-gambit",
+    "name": "King's Gambit",
+    "description": "The King's Gambit is a bold and aggressive gambit with f4, sacrificing a pawn to open lines and seize rapid attacking chances on the kingside.",
+    "pgn": "1. e4 e5 2. f4",
+    "fen": "rnbqkbnr/pppp1ppp/8/4p3/4PP2/8/PPPP2PP/RNBQKBNR b KQkq - 0 2",
+    "variations": []
+  },
+  {
+    "id": "vienna-game",
+    "name": "Vienna Game",
+    "description": "The Vienna Game is an elegant opening with Nc3, emphasizing flexibility and allowing for both aggressive and positional plans, including potential gambits.",
+    "pgn": "1. e4 e5 2. Nc3",
+    "fen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq - 1 2",
+    "variations": []
+  },
+  {
+    "id": "philidor-defense",
+    "name": "Philidor Defense",
+    "description": "The Philidor Defense is a compact defense for black with d6, prioritizing a solid pawn structure and slow development in preparation for counter-attacks.",
+    "pgn": "1. e4 e5 2. Nf3 d6",
+    "fen": "rnbqkbnr/ppp2ppp/3p4/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3",
+    "variations": []
+  },
+  {
+    "id": "russian-game",
+    "name": "Russian Game",
+    "description": "The Russian Game is also known as the Petroff Defense, offering a symmetrical and solid approach, focusing on early equalization and a stable pawn structure.",
+    "pgn": "1. e4 e5 2. Nf3 Nf6",
+    "fen": "rnbqkb1r/pppp1ppp/5n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+    "variations": []
+  },
+  {
+    "id": "east-indian-defense",
+    "name": "East Indian Defense",
+    "description": "The East Indian Defense is a hypermodern defense involving e6 and b6, emphasizing piece play and a flexible pawn structure while preparing counter-attacks.",
+    "pgn": "1. d4 Nf6 2. Nf3 g6",
+    "fen": "rnbqkb1r/pppppp1p/5np1/8/3P4/5N2/PPP1PPPP/RNBQKB1R w KQkq - 0 3",
+    "variations": []
+  },
+  {
+    "id": "queens-pawn",
+    "name": "Queen's Pawn",
+    "description": "The Queen's Pawn Game is a flexible and solid opening where White begins with 1.d4, aiming to control the center and develop pieces harmoniously, often leading to strategic and balanced positions.",
+    "pgn": "1. d4",
+    "fen": "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1",
+    "variations": [
+      {
+        "id": "queens-pawn-zukertort-variation",
+        "name": "Zukertort Variation",
+        "pgn": "1. d4 d5 2. Nf3",
+        "fen": "rnbqkbnr/ppp1pppp/8/3p4/3P4/5N2/PPP1PPPP/RNBQKB1R b KQkq - 1 2"
+      },
+      {
+        "id": "queens-pawn-neo-indian",
+        "name": "Neo-Indian",
+        "pgn": "1. d4 Nf6 2. c4 e6",
+        "fen": "rnbqkb1r/pppp1ppp/4pn2/8/2PP4/8/PP2PPPP/RNBQKBNR w KQkq - 0 3"
+      },
+      {
+        "id": "nimzo-indian-defense",
+        "name": "Nimzo-Indian Defense",
+        "pgn": "1. d4 Nf6 2. c4 e6 3. Nc3 Bb4",
+        "fen": "rnbqk2r/pppp1ppp/4pn2/8/1bPP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 2 4"
+      },
+      {
+        "id": "queens-indian-defense",
+        "name": "Queen's Indian Defense",
+        "pgn": "1. d4 Nf6 2. c4 e6 3. Nf3 b6",
+        "fen": "rnbqkb1r/p1pp1ppp/1p2pn2/8/2PP4/5N2/PP2PPPP/RNBQKB1R w KQkq - 0 4"
+      }
+    ]
+  },
+  {
+    "id": "ruy-lopez",
+    "name": "Ruy Lopez",
+    "description": "The Ruy Lopez is a classical opening with Bb5, aiming to build long-term pressure on black's position and maintain central control.",
+    "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bb5",
+    "fen": "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
+    "variations": [
+      {
+        "id": "ruy-lopez-steinitz-defense",
+        "name": "Steinitz Defense",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bb5 d6",
+        "fen": "r1bqkbnr/ppp2ppp/2np4/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4"
+      },
+      {
+        "id": "ruy-lopez-berlin-defense",
+        "name": "Berlin Defense",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bb5 Nf6",
+        "fen": "r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4"
+      },
+      {
+        "id": "ruy-lopez-berlin-defense-rio-gambit-accepted",
+        "name": "Berlin Defense, Rio Gambit Accepted",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bb5 Nf6 4. O-O Nxe4",
+        "fen": "r1bqkb1r/pppp1ppp/2n5/1B2p3/4n3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 0 5"
+      },
+      {
+        "id": "spanish-open",
+        "name": "Open Variation",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Nxe4",
+        "fen": "r1bqkb1r/1ppp1ppp/p1n5/4p3/B3n3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 0 6"
+      },
+      {
+        "id": "spanish-closed",
+        "name": "Closed Variation",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7",
+        "fen": "r1bqk2r/1pppbppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 4 6"
+      },
+      {
+        "id": "ruy-lopez-exchange-variation",
+        "name": "Exchange Variation",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Bxc6",
+        "fen": "r1bqkbnr/1ppp1ppp/p1B5/4p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 0 4"
+      },
+      {
+        "id": "ruy-lopez-morphy-defense",
+        "name": "Morphy Defense",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O",
+        "fen": "r1bqkb1r/1ppp1ppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 3 5"
+      },
+      {
+        "id": "ruy-lopez-marshall-attack",
+        "name": "Marshall Attack",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 O-O 8. c3 d5",
+        "fen": "r1bq1rk1/2p1bppp/p1n2n2/1p1pp3/4P3/1BP2N2/PP1P1PPP/RNBQR1K1 w - - 0 9"
+      },
+      {
+        "id": "spanish-schliemann",
+        "name": "Schliemann-Jaenisch Gambit",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bb5 f5",
+        "fen": "r1bqkbnr/pppp2pp/2n5/1B2pp2/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq f6 0 4"
+      }
+    ]
+  },
+  {
+    "id": "three-knights-opening",
+    "name": "Three Knights Opening",
+    "description": "The Three Knights Opening is a classical and harmonious development scheme, leading to solid positions and potential transpositions into other openings.",
+    "pgn": "1. e4 e5 2. Nf3 Nc6 3. Nc3",
+    "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/2N2N2/PPPP1PPP/R1BQKB1R b KQkq - 3 3",
+    "variations": [
+      {
+        "id": "four-knights-game-spanish-variation",
+        "name": "Four Knights Game: Spanish Variation",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Nc3 Nf6 4. Bb5",
+        "fen": "r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/2N2N2/PPPP1PPP/R1BQK2R b KQkq - 5 4"
+      }
+    ]
+  },
+  {
+    "id": "kings-indian-defense",
+    "name": "King's Indian Defense",
+    "description": "The King's Indian Defense is a hypermodern defense for black involving Nf6 and g6, ceding the center initially but preparing a counter-strike on the kingside.",
+    "pgn": "1. d4 Nf6 2. c4 g6 3. Nc3",
+    "fen": "rnbqkb1r/pppppp1p/5np1/8/2PP4/2N5/PP2PPPP/R1BQKBNR b KQkq - 1 3",
+    "variations": [
+      {
+        "id": "gr-nfeld-defense",
+        "name": "Grünfeld Defense",
+        "pgn": "1. d4 Nf6 2. c4 g6 3. Nc3 d5",
+        "fen": "rnbqkb1r/ppp1pp1p/5np1/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 0 4"
+      },
+      {
+        "id": "kingindian-mainline",
+        "name": "Main Line",
+        "pgn": "1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. Nf3 O-O 6. Be2 e5 7. O-O Nc6",
+        "fen": "r1bq1rk1/ppp2pbp/2np1np1/4p3/2PPP3/2N2N2/PP2BPPP/R1BQ1RK1 w - - 2 8"
+      },
+      {
+        "id": "kingindian-samisch",
+        "name": "Samisch Variation",
+        "pgn": "1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. f3",
+        "fen": "rnbqk2r/ppp1ppbp/3p1np1/8/2PPP3/2N2P2/PP4PP/R1BQKBNR b KQkq - 0 5"
+      },
+      {
+        "id": "kingindian-averbakh",
+        "name": "Averbakh Variation",
+        "pgn": "1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. Be2 O-O 6. Bg5",
+        "fen": "rnbq1rk1/ppp1ppbp/3p1np1/6B1/2PPP3/2N5/PP2BPPP/R2QK1NR b KQ - 3 6"
+      },
+      {
+        "id": "kingindian-petrosian",
+        "name": "Petrosian Variation",
+        "pgn": "1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. Nf3 O-O 6. Be2 e5 7. d5",
+        "fen": "rnbq1rk1/ppp2pbp/3p1np1/3Pp3/2P1P3/2N2N2/PP2BPPP/R1BQK2R b KQ - 0 7"
+      },
+      {
+        "id": "kingindian-fourpawns",
+        "name": "Four Pawns Attack",
+        "pgn": "1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. f4",
+        "fen": "rnbqk2r/ppp1ppbp/3p1np1/8/2PPPP2/2N5/PP4PP/R1BQKBNR b KQkq f3 0 5"
+      }
+    ]
+  },
+  {
+    "id": "italian-game",
+    "name": "Italian Game",
+    "description": "The Italian Game is an opening with Bc4 focused on rapid development and early central control, offering opportunities for both tactical and positional play.",
+    "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bc4",
+    "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
+    "variations": [
+      {
+        "id": "italian-game-two-knights-defense",
+        "name": "Two Knights Defense",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6",
+        "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4"
+      },
+      {
+        "id": "italian-evan",
+        "name": "Evans Gambit",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. b4",
+        "fen": "r1bqk1nr/pppp1ppp/2n5/2b1p3/1PB1P3/5N2/P1PP1PPP/RNBQK2R b KQkq b3 0 4"
+      },
+      {
+        "id": "italian-game-evans-gambit-main-line",
+        "name": "Evans Gambit, Main Line",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. b4 Bxb4 5. c3 Ba5",
+        "fen": "r1bqk1nr/pppp1ppp/2n5/b3p3/2B1P3/2P2N2/P2P1PPP/RNBQK2R w KQkq - 1 6"
+      },
+      {
+        "id": "italian-piano",
+        "name": "Giuoco Piano",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5",
+        "fen": "r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4"
+      },
+      {
+        "id": "italian-pianissimo",
+        "name": "Giuoco Pianissimo",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3",
+        "fen": "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQK2R b KQkq - 0 5"
+      }
+    ]
+  },
+  {
+    "id": "center-game-normal-variation",
+    "name": "Center Game",
+    "description": "The Center Game is a direct and straightforward opening with d4, aiming to open the center early and develop quickly with active piece play.",
+    "pgn": "1. e4 e5 2. d4 exd4 3. Qxd4 Nc6",
+    "fen": "r1bqkbnr/pppp1ppp/2n5/8/3QP3/8/PPP2PPP/RNB1KBNR w KQkq - 1 4",
+    "variations": []
+  },
+  {
+    "id": "scotch-game",
+    "name": "Scotch Game",
+    "description": "The Scotch Game is a sharp opening with d4, designed to open the center and invite dynamic play, often leading to open positions with tactical opportunities.",
+    "pgn": "1. e4 e5 2. Nf3 Nc6 3. d4 exd4 4. Nxd4",
+    "fen": "r1bqkbnr/pppp1ppp/2n5/8/3NP3/8/PPP2PPP/RNBQKB1R b KQkq - 0 4",
+    "variations": [
+      {
+        "id": "scotch-schmidt",
+        "name": "Schmidt Variation",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. d4 exd4 4. Nxd4 Nf6",
+        "fen": "r1bqkb1r/pppp1ppp/2n2n2/8/3NP3/8/PPP2PPP/RNBQKB1R w KQkq - 1 5"
+      },
+      {
+        "id": "scotch-classical",
+        "name": "Classical Variation",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. d4 exd4 4. Nxd4 Bc5",
+        "fen": "r1bqk1nr/pppp1ppp/2n5/2b5/3NP3/8/PPP2PPP/RNBQKB1R w KQkq - 1 5"
+      },
+      {
+        "id": "scotch-gambit",
+        "name": "Scotch Gambit",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. d4 exd4 4. Bc4",
+        "fen": "r1bqkbnr/pppp1ppp/2n5/8/2BpP3/5N2/PPP2PPP/RNBQK2R b KQkq - 1 4"
+      },
+      {
+        "id": "scotch-goring",
+        "name": "Goring Gambit",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. d4 exd4 4. c3",
+        "fen": "r1bqkbnr/pppp1ppp/2n5/8/3pP3/2P2N2/PP3PPP/RNBQKB1R b KQkq - 0 4"
+      },
+      {
+        "id": "scotch-malaniuk",
+        "name": "Malaniuk Variation",
+        "pgn": "1. e4 e5 2. Nf3 Nc6 3. d4 exd4 4. Nxd4 Bb4+",
+        "fen": "r1bqk1nr/pppp1ppp/2n5/8/1b1NP3/8/PPP2PPP/RNBQKB1R w KQkq - 1 5"
+      }
+    ]
+  },
+  {
+    "id": "pirc",
+    "name": "Pirc Defense",
+    "description": "The Pirc Defense is a hypermodern opening where Black allows White to take the center and plans to attack it later. It often leads to flexible and complex positions.",
+    "pgn": "1. e4 d6",
+    "fen": "rnbqkbnr/pp1ppppp/2p5/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+    "variations": [
+      {
+        "id": "pirc-mainline",
+        "name": "Main Line",
+        "pgn": "1. e4 d6 2. d4 Nf6 3. Nc3 g6",
+        "fen": "rnbqkb1r/ppp1pp1p/3p1np1/8/3PP3/2N5/PPP2PPP/R1BQKBNR w KQkq - 0 4"
+      },
+      {
+        "id": "pirc-austrian",
+        "name": "Austrian Attack",
+        "pgn": "1. e4 d6 2. d4 Nf6 3. Nc3 g6 4. f4",
+        "fen": "rnbqkb1r/ppp1pp1p/3p1np1/8/3PPP2/2N5/PPP3PP/R1BQKBNR b KQkq f3 0 4"
+      },
+      {
+        "id": "pirc-classical",
+        "name": "Classical Variation",
+        "pgn": "1. e4 d6 2. d4 Nf6 3. Nc3 g6 4. Nf3",
+        "fen": "rnbqkb1r/ppp1pp1p/3p1np1/8/3PP3/2N2N2/PPP2PPP/R1BQKB1R b KQkq - 1 4"
+      },
+      {
+        "id": "pirc-150",
+        "name": "150 Attack",
+        "pgn": "1. e4 d6 2. d4 Nf6 3. Nc3 g6 4. Be3",
+        "fen": "rnbqkb1r/ppp1pp1p/3p1np1/8/3PP3/2N1B3/PPP2PPP/R2QKBNR b KQkq - 1 4"
+      },
+      {
+        "id": "pirc-byrne",
+        "name": "Byrne Variation",
+        "pgn": "1. e4 d6 2. d4 Nf6 3. Nc3 g6 4. Bg5",
+        "fen": "rnbqkb1r/ppp1pp1p/3p1np1/6B1/3PP3/2N5/PPP2PPP/R2QKBNR b KQkq - 1 4"
+      },
+      {
+        "id": "pirc-sveshnikov",
+        "name": "Sveshnikov System",
+        "pgn": "1. e4 d6 2. d4 Nf6 3. Nc3 g6 4. g3",
+        "fen": "rnbqkb1r/ppp1pp1p/3p1np1/8/3PP3/2N3P1/PPP2P1P/R1BQKBNR b KQkq - 0 4"
+      }
+    ]
+  }
+]

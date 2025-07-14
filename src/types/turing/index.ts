@@ -1,4 +1,4 @@
-import { Termination, Color, Player } from '..'
+import { Termination, Color, Player, GameTree } from '..'
 import { BaseGame } from '../base'
 
 export interface TuringGame extends BaseGame {
@@ -13,4 +13,6 @@ export interface TuringSubmissionResult {
   correct: boolean
   gameType: string
   timeControl: string
+  turingElo: number
+  ratingDiff: number
 }

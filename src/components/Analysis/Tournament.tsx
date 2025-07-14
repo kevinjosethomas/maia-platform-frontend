@@ -1,27 +1,6 @@
 import { Dispatch, SetStateAction } from 'react'
-
-import {
-  PlusIcon,
-  MinusIcon,
-  CaretUpIcon,
-  CaretDownIcon,
-} from 'src/components/Icons/icons'
 import { AnalysisTournamentGame } from 'src/types'
-
-export default function Tournament({
-  id,
-  index,
-  currentId,
-  openIndex,
-  openElement,
-  setOpenIndex,
-  loadingIndex,
-  setLoadingIndex,
-  selectedGameElement,
-  analysisTournamentList,
-  loadNewTournamentGame,
-  setCurrentMove,
-}: {
+type Props = {
   id: string
   index: number
   currentId: string[] | null
@@ -34,10 +13,25 @@ export default function Tournament({
   analysisTournamentList: Map<string, AnalysisTournamentGame[]>
   loadNewTournamentGame: (
     id: string[],
-    setCurrentMove: Dispatch<SetStateAction<number>>,
+    setCurrentMove?: Dispatch<SetStateAction<number>>,
   ) => Promise<void>
-  setCurrentMove: Dispatch<SetStateAction<number>>
-}) {
+  setCurrentMove?: Dispatch<SetStateAction<number>>
+}
+
+export const Tournament = ({
+  id,
+  index,
+  currentId,
+  openIndex,
+  openElement,
+  setOpenIndex,
+  loadingIndex,
+  setLoadingIndex,
+  selectedGameElement,
+  analysisTournamentList,
+  loadNewTournamentGame,
+  setCurrentMove,
+}: Props) => {
   const games = analysisTournamentList.get(id)
   const [sectionId, title] = id.split('---')
   const opened = openIndex == index
@@ -56,12 +50,14 @@ export default function Tournament({
         }
       >
         <div className="flex items-center gap-1">
-          <div className="w-4">{openIndex == index ? MinusIcon : PlusIcon}</div>
-          <div className="text-left">{title}</div>
+          <span className="material-symbols-outlined w-6 text-left text-sm">
+            {openIndex == index ? 'remove' : 'add'}
+          </span>
+          <div className="text-left text-sm">{title}</div>
         </div>
-        <div className="w-2">
-          {openIndex == index ? CaretUpIcon : CaretDownIcon}
-        </div>
+        <span className="material-symbols-outlined material-symbols-filled text-sm">
+          {openIndex == index ? 'arrow_drop_up' : 'arrow_drop_down'}
+        </span>
       </button>
       <div
         className={`flex w-full flex-col bg-background-1 ${openIndex === index ? 'block' : 'hidden'}`}
@@ -89,19 +85,21 @@ export default function Tournament({
             >
               <div className="flex items-center justify-start gap-2">
                 <div
-                  className={`flex h-full w-10 justify-center py-1 ${selected ? 'bg-background-3' : 'bg-background-2 group-hover:bg-background-3'}`}
+                  className={`flex h-full w-9 justify-center py-1 ${selected ? 'bg-background-3' : 'bg-background-2 group-hover:bg-background-3'}`}
                 >
                   {loadingIndex === j ? (
                     <div className="spinner" />
                   ) : (
-                    <p className="text-primary">{game.game_index}</p>
+                    <p className="text-sm text-secondary">{game.game_index}</p>
                   )}
                 </div>
-                <div className="flex items-center whitespace-nowrap py-1">
+                <div className="items-center whitespace-nowrap text-sm">
                   {game.white.split(',')[0]} – {game.black.split(',')[0]}
                 </div>
               </div>
-              <div>{game.result}</div>
+              <div className="whitespace-nowrap text-sm font-light text-secondary">
+                {game.result?.replace('1/2', '½').replace('1/2', '½')}
+              </div>
             </button>
           )
         })}

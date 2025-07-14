@@ -1,18 +1,48 @@
 import Head from 'next/head'
 import Link from 'next/link'
-
 import { Post } from 'src/types'
-import { getSortedPostsData } from 'src/blog/posts'
+import { getSortedPostsData } from 'src/lib/blog/posts'
 
 export default function Blog({ posts }: { posts: Post[] }) {
   return (
-    <div className="flex h-full w-full flex-col items-start justify-center gap-5 px-[4%] py-[10%] md:px-[4%] md:py-[2%]">
+    <div className="mx-auto flex h-full w-[90%] flex-col items-start justify-center gap-5 py-[10%] md:py-[2%]">
       <Head>
         <title>Blog – Maia Chess</title>
         <meta
           name="description"
-          content="Maia Chess is in beta! Sign up to get access"
+          content="Read the latest insights from the Maia Chess team about human-like chess AI, research updates, and platform developments."
         />
+
+        {/* Open Graph */}
+        <meta property="og:title" content="Blog – Maia Chess" />
+        <meta
+          property="og:description"
+          content="Read the latest insights from the Maia Chess team about human-like chess AI, research updates, and platform developments."
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://maiachess.com/blog" />
+        <meta
+          property="og:image"
+          content="https://maiachess.com/maia-og-image.png"
+        />
+        <meta property="og:site_name" content="Maia Chess" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Blog – Maia Chess" />
+        <meta
+          name="twitter:description"
+          content="Read the latest insights from the Maia Chess team about human-like chess AI, research updates, and platform developments."
+        />
+        <meta
+          name="twitter:image"
+          content="https://maiachess.com/maia-og-image.png"
+        />
+
+        {/* Additional SEO */}
+        <meta name="author" content="Maia Chess Team" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://maiachess.com/blog" />
       </Head>
       <h1 className="text-4xl font-bold">Blog</h1>
       <div className="flex w-full flex-col gap-6 overflow-x-hidden">

@@ -3,8 +3,15 @@ import type { NextPage } from 'next'
 import React, { useCallback, useContext, useEffect, useRef } from 'react'
 
 import { ModalContext } from 'src/contexts'
-import { HomeHero } from 'src/components/HomeHero/HomeHero'
-import { AboutMaia } from 'src/components/AboutMaia/AboutMaia'
+import {
+  HomeHero,
+  AboutMaia,
+  PlaySection,
+  AnalysisSection,
+  TrainSection,
+  AdditionalFeaturesSection,
+  PageNavigation,
+} from 'src/components'
 
 const Home: NextPage = () => {
   const { setPlaySetupModalProps } = useContext(ModalContext)
@@ -15,13 +22,13 @@ const Home: NextPage = () => {
     [setPlaySetupModalProps],
   )
 
-  const helpRef = useRef<HTMLDivElement>(null)
+  const featuresRef = useRef<HTMLDivElement>(null)
 
   const scrollHandler = useCallback(() => {
-    if (helpRef.current) {
-      helpRef.current.scrollIntoView({ behavior: 'smooth' })
+    if (featuresRef.current) {
+      featuresRef.current.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [helpRef])
+  }, [featuresRef])
 
   return (
     <>
@@ -33,7 +40,20 @@ const Home: NextPage = () => {
         />
       </Head>
       <HomeHero scrollHandler={scrollHandler} />
-      <div ref={helpRef}>
+      <PageNavigation />
+      <div ref={featuresRef}>
+        <div className="bg-background-1">
+          <PlaySection id="play-section" />
+        </div>
+        <div className="bg-background-2">
+          <AnalysisSection id="analysis-section" />
+        </div>
+        <div className="bg-background-1">
+          <TrainSection id="train-section" />
+        </div>
+        <div className="bg-background-2">
+          <AdditionalFeaturesSection id="more-features" />
+        </div>
         <AboutMaia />
       </div>
     </>

@@ -68,12 +68,14 @@ export const getGameMove = async (
                   piece: piece || '',
                   initial_clock: initial_clock.toString(),
                   current_clock: current_clock.toString(),
+                  maia_version: 'maia2rapid',
                 }
               : {
                   maia_name: maiaVersion,
                   piece: piece || '',
                   initial_clock: initial_clock.toString(),
                   current_clock: current_clock.toString(),
+                  maia_version: 'maia2rapid',
                 }
             : fen
               ? {
@@ -81,11 +83,13 @@ export const getGameMove = async (
                   maia_name: maiaVersion,
                   initial_clock: initial_clock.toString(),
                   current_clock: current_clock.toString(),
+                  maia_version: 'maia2rapid',
                 }
               : {
                   maia_name: maiaVersion,
                   initial_clock: initial_clock.toString(),
                   current_clock: current_clock.toString(),
+                  maia_version: 'maia2rapid',
                 },
         ),
     ),
@@ -98,6 +102,32 @@ export const getGameMove = async (
       body: JSON.stringify(moves),
     },
   )
+
+  return res.json()
+}
+
+export const getBookMoves = async (fen: string) => {
+  const res = await fetch(buildUrl(`play/get_book_moves?fen=${fen}`), {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      moves: [],
+      maia_names: [
+        'maia_kdd_1100',
+        'maia_kdd_1200',
+        'maia_kdd_1300',
+        'maia_kdd_1400',
+        'maia_kdd_1500',
+        'maia_kdd_1600',
+        'maia_kdd_1700',
+        'maia_kdd_1800',
+        'maia_kdd_1900',
+      ],
+    }),
+  })
 
   return res.json()
 }
